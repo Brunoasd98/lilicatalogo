@@ -4,48 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Lilia Natura & Avon</title>
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        
-        /* Variables para modo claro/oscuro */
-        :root {
-            --bg: #fef5f0;
-            --card: white;
-            --text: #2c3e50;
-            --text-light: #666;
-            --accent: #d472a0;
-            --border: #ffe0e8;
-            --natura: #ef7d04;
-            --avon: #b3003b;
-            --success: #2ecc71;
-            --danger: #e74c3c;
-            --warning: #f39c12;
-            --info: #17a2b8;
-        }
-        
-        body.dark {
-            --bg: #1a1a2e;
-            --card: #1e1e2f;
-            --text: #e0e0e0;
-            --text-light: #aaa;
-            --border: #2a2a3e;
-            --accent: #ff6b9d;
-        }
-        
+        :root { --bg: #fef5f0; --card: white; --text: #2c3e50; --text-light: #666; --accent: #d472a0; --border: #ffe0e8; --natura: #ef7d04; --avon: #b3003b; --success: #2ecc71; --danger: #e74c3c; --warning: #f39c12; --info: #17a2b8; }
+        body.dark { --bg: #1a1a2e; --card: #1e1e2f; --text: #e0e0e0; --text-light: #aaa; --border: #2a2a3e; --accent: #ff6b9d; }
         body { background: var(--bg); color: var(--text); transition: 0.3s; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         
-        /* Header */
         .header { background: var(--card); border-radius: 30px; padding: 20px 35px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
         .logo h1 { background: linear-gradient(135deg, var(--accent), #b84c7c); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .logo p { color: var(--text-light); font-size: 0.85rem; }
         
-        /* Botones */
         .btn { padding: 10px 24px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; transition: 0.3s; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
@@ -54,19 +27,16 @@
         .btn-warning { background: var(--warning); color: white; }
         .btn-info { background: var(--info); color: white; }
         
-        /* Catálogos */
         .catalogos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
-        .catalogo-card { border-radius: 30px; padding: 25px; text-align: center; transition: 0.3s; cursor: pointer; }
+        .catalogo-card { border-radius: 30px; padding: 25px; text-align: center; transition: 0.3s; }
         .catalogo-card:first-child { background: var(--natura); }
         .catalogo-card:last-child { background: var(--avon); }
         .catalogo-card:hover { transform: scale(1.02); }
         .catalogo-card h3 { color: white; font-size: 1.5rem; margin-bottom: 15px; }
         .catalogo-card a { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; }
         
-        /* Panel Admin */
         .admin-panel { background: var(--card); border-radius: 30px; padding: 35px; margin-bottom: 30px; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
         .admin-panel.show { display: block; }
-        
         .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
         .tab-btn { background: none; border: none; padding: 10px 25px; cursor: pointer; font-weight: 600; color: var(--text); border-radius: 30px; }
         .tab-btn.active { background: var(--accent); color: white; }
@@ -77,11 +47,9 @@
         .form-group { display: flex; flex-direction: column; gap: 8px; }
         .form-group label { font-weight: 600; color: var(--accent); }
         .form-group input, .form-group select { padding: 12px; border: 2px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text); }
-        
         .producto-item { background: var(--border); border-radius: 20px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .producto-actions { display: flex; gap: 8px; }
         
-        /* Filtros */
         .filtros { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 25px; }
         .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; align-items: center; }
         .cat-btn { padding: 8px 16px; border: 2px solid var(--accent); background: transparent; color: var(--accent); border-radius: 30px; cursor: pointer; }
@@ -93,7 +61,6 @@
         .subcategoria-container.show { display: flex; }
         .orden-select { padding: 8px 16px; border-radius: 30px; border: 2px solid var(--border); background: var(--card); color: var(--text); }
         
-        /* Productos */
         .catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
         .producto-card { background: var(--card); border-radius: 25px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); position: relative; }
         .producto-imagen { width: 100%; height: 250px; object-fit: cover; cursor: pointer; }
@@ -109,18 +76,15 @@
         .btn-carrito { background: var(--accent); color: white; }
         .btn-comprar-ahora { background: var(--info); color: white; }
         
-        /* Buscador */
         .buscador-wrapper { position: relative; margin-bottom: 25px; }
         .buscador-wrapper input { width: 100%; padding: 16px 20px 16px 55px; border-radius: 60px; border: 2px solid var(--border); background: var(--card); color: var(--text); }
         
-        /* Videos */
         .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px; }
         .video-card { background: var(--border); border-radius: 20px; overflow: hidden; }
         .video-container { position: relative; padding-bottom: 56.25%; }
         .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
         .video-card h4 { padding: 15px; }
         
-        /* Carrito */
         .cart-floating { position: fixed; bottom: 30px; right: 30px; z-index: 1000; }
         .cart-btn { background: var(--accent); color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
         .cart-count { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; width: 25px; height: 25px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
@@ -132,7 +96,6 @@
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
         .cart-total { padding: 20px; border-top: 2px solid var(--border); font-size: 1.2rem; font-weight: bold; }
         
-        /* Modal imagen */
         .image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; cursor: pointer; }
         .image-modal.show { display: flex; }
         .image-modal img { max-width: 90%; max-height: 90%; border-radius: 20px; }
@@ -140,7 +103,6 @@
         
         .dark-mode-btn { background: var(--card); border: 2px solid var(--accent); border-radius: 50px; padding: 8px 16px; cursor: pointer; }
         .google-btn { background: white; border: 1px solid #dadce0; border-radius: 40px; padding: 8px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
-        
         .stock-section { background: var(--card); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
         .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
         
@@ -154,12 +116,9 @@
         <div class="header-actions">
             <button class="dark-mode-btn" id="darkModeToggle">🌙</button>
             <div id="googleLoginBtn">
-                <button class="google-btn" onclick="loginWithGoogle()">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="Google">
-                    Entrar con Google
-                </button>
+                <button class="google-btn" id="googleLoginBtnClick">🔐 Entrar con Google</button>
             </div>
-            <button class="btn btn-outline" id="btnLogout" onclick="logoutUser()" style="display:none;">Salir</button>
+            <button class="btn btn-outline" id="btnLogout" style="display:none;">Salir</button>
         </div>
     </div>
 
@@ -279,7 +238,7 @@
 </div>
 
 <script>
-    // Firebase
+    // ========== CONFIGURACIÓN FIREBASE ==========
     const firebaseConfig = {
         apiKey: "AIzaSyB4l7EZIsVcZlnKB0H8UH7L3uiJ5ybf6lc",
         authDomain: "lilia-catalogo.firebaseapp.com",
@@ -293,10 +252,9 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
-    
     const CORREO_ADMIN = "brunoromero637@gmail.com";
     
-    // Variables
+    // ========== VARIABLES GLOBALES ==========
     let productos = [];
     let videos = [];
     let cupones = [];
@@ -308,14 +266,12 @@
     let editandoId = null;
     let marcaActual = "all", categoriaActual = "all", generoActual = "all", ordenActual = "nombre", busquedaActual = "";
     
-    // UI Functions
+    // ========== FUNCIONES UI ==========
     function openImageModal(url) {
         document.getElementById("modalImage").src = url;
         document.getElementById("imageModal").classList.add("show");
     }
-    function closeImageModal() {
-        document.getElementById("imageModal").classList.remove("show");
-    }
+    function closeImageModal() { document.getElementById("imageModal").classList.remove("show"); }
     
     function initDarkMode() {
         const dark = localStorage.getItem("darkMode") === "true";
@@ -342,29 +298,18 @@
         return url;
     }
     
-    function actualizarLinks() {
-        const ln = document.getElementById("catalogoNaturaLink");
-        const la = document.getElementById("catalogoAvonLink");
-        if (ln) ln.href = catalogoNaturaUrl;
-        if (la) la.href = catalogoAvonUrl;
+    function actualizarLinksCatalogo() {
+        document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
+        document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
     }
     
-    function guardarLinksManual() {
-        const n = document.getElementById("linkNaturaInput").value.trim();
-        const a = document.getElementById("linkAvonInput").value.trim();
-        if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); }
-        if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); }
-        actualizarLinks();
-        alert("Links actualizados");
-    }
-    
-    // Carrito
+    // ========== CARRITO ==========
     function actualizarCarritoUI() {
         let count = carrito.reduce((s,i) => s + i.cantidad, 0);
-        const cartCount = document.getElementById("cartCount");
+        let cartCount = document.getElementById("cartCount");
         if (cartCount) cartCount.textContent = count;
         
-        const cartItems = document.getElementById("cartItems");
+        let cartItems = document.getElementById("cartItems");
         if (carrito.length === 0) {
             if (cartItems) cartItems.innerHTML = "<p style='text-align:center;'>🛒 Carrito vacío</p>";
         } else {
@@ -382,12 +327,13 @@
                 `).join('');
             }
         }
+        
         let total = carrito.reduce((s,i) => s + (parseInt(i.precio.replace(/[^0-9]/g,'')) || 0) * i.cantidad, 0);
         if (cuponAplicado) {
             let desc = cuponAplicado.tipo === "porcentaje" ? total * cuponAplicado.valor / 100 : cuponAplicado.valor;
             total = Math.max(0, total - desc);
         }
-        const cartTotal = document.getElementById("cartTotal");
+        let cartTotal = document.getElementById("cartTotal");
         if (cartTotal) cartTotal.innerHTML = `Total: $${total.toLocaleString()}`;
     }
     
@@ -459,14 +405,15 @@
         window.open(`https://wa.me/?text=${msg}`, '_blank');
     }
     
-    // Renderizar
+    // ========== RENDERIZAR ==========
     function renderizarAdmin() {
         let activos = productos.filter(p => p.stock > 0);
         let agotados = productos.filter(p => p.stock === 0);
-        const listaActivos = document.getElementById("listaActivos");
-        const listaAgotados = document.getElementById("listaAgotados");
-        const listaVideosAdmin = document.getElementById("listaVideosAdmin");
-        const listaCupones = document.getElementById("listaCupones");
+        
+        let listaActivos = document.getElementById("listaActivos");
+        let listaAgotados = document.getElementById("listaAgotados");
+        let listaVideosAdmin = document.getElementById("listaVideosAdmin");
+        let listaCupones = document.getElementById("listaCupones");
         
         if (listaActivos) {
             listaActivos.innerHTML = activos.map(p => `
@@ -514,8 +461,8 @@
     }
     
     function actualizarSubcategorias() {
-        const container = document.getElementById("subcategoriasContainer");
-        const cats = ["Perfumes", "Jabones", "Cremas", "Maquillaje", "Cabello", "Otros"];
+        let container = document.getElementById("subcategoriasContainer");
+        let cats = ["Perfumes", "Jabones", "Cremas", "Maquillaje", "Cabello", "Otros"];
         if (marcaActual === "all") {
             if (container) container.classList.remove("show");
             return;
@@ -547,8 +494,8 @@
         else if (ordenActual === "precio-mayor") filtrados.sort((a,b) => (parseInt(b.precio.replace(/[^0-9]/g,'')) || 0) - (parseInt(a.precio.replace(/[^0-9]/g,'')) || 0));
         
         const generoIconos = { Mujer: "👩", Hombre: "👨", Infantil: "🧒", Unisex: "👥" };
-        const catalogoPublico = document.getElementById("catalogoPublico");
-        const videosPublicos = document.getElementById("videosPublicos");
+        let catalogoPublico = document.getElementById("catalogoPublico");
+        let videosPublicos = document.getElementById("videosPublicos");
         
         if (catalogoPublico) {
             catalogoPublico.innerHTML = filtrados.map(p => {
@@ -591,30 +538,17 @@
         }
     }
     
-    // CRUD Firestore
+    // ========== CRUD PRODUCTOS ==========
     async function cargarProductos() {
-        const snap = await db.collection("productos").get();
+        let snap = await db.collection("productos").get();
         productos = snap.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
         renderizarPublico();
         renderizarAdmin();
     }
     
-    async function cargarVideos() {
-        const snap = await db.collection("videos").get();
-        videos = snap.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
-        renderizarPublico();
-        renderizarAdmin();
-    }
-    
-    async function cargarCupones() {
-        const snap = await db.collection("cupones").get();
-        cupones = snap.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
-        renderizarAdmin();
-    }
-    
     async function guardarProducto(producto) {
         if (producto.firestoreId) {
-            const { firestoreId, ...data } = producto;
+            let { firestoreId, ...data } = producto;
             await db.collection("productos").doc(firestoreId).update(data);
         } else {
             await db.collection("productos").add(producto);
@@ -622,38 +556,6 @@
         await cargarProductos();
     }
     
-    async function eliminarProducto(id) {
-        if (confirm("¿Eliminar este producto?")) {
-            await db.collection("productos").doc(id).delete();
-            await cargarProductos();
-        }
-    }
-    
-    async function guardarVideo(video) {
-        await db.collection("videos").add(video);
-        await cargarVideos();
-    }
-    
-    async function eliminarVideo(id) {
-        if (confirm("¿Eliminar este video?")) {
-            await db.collection("videos").doc(id).delete();
-            await cargarVideos();
-        }
-    }
-    
-    async function guardarCupon(cupon) {
-        await db.collection("cupones").add(cupon);
-        await cargarCupones();
-    }
-    
-    async function eliminarCupon(id) {
-        if (confirm("¿Eliminar este cupón?")) {
-            await db.collection("cupones").doc(id).delete();
-            await cargarCupones();
-        }
-    }
-    
-    // Formularios
     async function guardarProductoForm() {
         let nombre = document.getElementById("prodNombre").value.trim();
         let marca = document.getElementById("prodMarca").value;
@@ -668,12 +570,12 @@
         if (!nombre || !precio) { alert("Completá nombre y precio"); return; }
         
         if (archivo) {
-            const reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = async (e) => {
                 let prod = { nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: e.target.result };
                 if (editandoId) prod.firestoreId = editandoId;
                 await guardarProducto(prod);
-                limpiarForm();
+                limpiarFormProducto();
                 alert("Producto guardado");
             };
             reader.readAsDataURL(archivo);
@@ -681,7 +583,7 @@
             let prod = { nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imagen || "https://placehold.co/400x300?text=Producto" };
             if (editandoId) prod.firestoreId = editandoId;
             await guardarProducto(prod);
-            limpiarForm();
+            limpiarFormProducto();
             alert("Producto guardado");
         }
     }
@@ -703,16 +605,7 @@
         document.getElementById("btnGuardar").textContent = "Actualizar";
     }
     
-    async function duplicarProducto(id) {
-        let original = productos.find(p => p.firestoreId === id);
-        if (!original) return;
-        let nuevo = { ...original, nombre: original.nombre + " (Copia)", stock: original.stock };
-        delete nuevo.firestoreId;
-        await guardarProducto(nuevo);
-        alert("Producto duplicado");
-    }
-    
-    function limpiarForm() {
+    function limpiarFormProducto() {
         document.getElementById("prodNombre").value = "";
         document.getElementById("prodPrecio").value = "";
         document.getElementById("prodPrecioRef").value = "";
@@ -725,14 +618,53 @@
         document.getElementById("btnCancelar").style.display = "none";
     }
     
+    async function eliminarProducto(id) {
+        if (confirm("¿Eliminar este producto?")) {
+            await db.collection("productos").doc(id).delete();
+            await cargarProductos();
+        }
+    }
+    
+    async function duplicarProducto(id) {
+        let original = productos.find(p => p.firestoreId === id);
+        if (!original) return;
+        let nuevo = { ...original, nombre: original.nombre + " (Copia)", stock: original.stock };
+        delete nuevo.firestoreId;
+        await guardarProducto(nuevo);
+        alert("Producto duplicado");
+    }
+    
+    // ========== CRUD VIDEOS ==========
+    async function cargarVideos() {
+        let snap = await db.collection("videos").get();
+        videos = snap.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
+        renderizarPublico();
+        renderizarAdmin();
+    }
+    
     async function agregarVideo() {
         let titulo = document.getElementById("videoTitulo").value.trim();
         let url = document.getElementById("videoUrl").value.trim();
         if (!titulo || !url) { alert("Completá título y URL"); return; }
-        await guardarVideo({ titulo, url });
+        await db.collection("videos").add({ titulo, url });
+        await cargarVideos();
         document.getElementById("videoTitulo").value = "";
         document.getElementById("videoUrl").value = "";
         alert("Video agregado");
+    }
+    
+    async function eliminarVideo(id) {
+        if (confirm("¿Eliminar este video?")) {
+            await db.collection("videos").doc(id).delete();
+            await cargarVideos();
+        }
+    }
+    
+    // ========== CRUD CUPONES ==========
+    async function cargarCupones() {
+        let snap = await db.collection("cupones").get();
+        cupones = snap.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
+        renderizarAdmin();
     }
     
     async function agregarCupon() {
@@ -741,17 +673,35 @@
         let valor = parseInt(document.getElementById("cuponValor").value);
         let unico = document.getElementById("cuponUnico").value;
         if (!codigo || !valor) { alert("Completá código y valor"); return; }
-        await guardarCupon({ codigo, tipo, valor, unico });
+        await db.collection("cupones").add({ codigo, tipo, valor, unico });
+        await cargarCupones();
         document.getElementById("cuponCodigo").value = "";
         document.getElementById("cuponValor").value = "";
         alert("Cupón agregado");
     }
     
-    // Login
-    window.loginWithGoogle = async function() {
+    async function eliminarCupon(id) {
+        if (confirm("¿Eliminar este cupón?")) {
+            await db.collection("cupones").doc(id).delete();
+            await cargarCupones();
+        }
+    }
+    
+    // ========== LINKS CATÁLOGOS ==========
+    function guardarLinksManual() {
+        let n = document.getElementById("linkNaturaInput").value.trim();
+        let a = document.getElementById("linkAvonInput").value.trim();
+        if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); }
+        if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); }
+        actualizarLinksCatalogo();
+        alert("Links actualizados");
+    }
+    
+    // ========== LOGIN ==========
+    async function loginWithGoogle() {
         try {
-            const result = await auth.signInWithPopup(provider);
-            const user = result.user;
+            let result = await auth.signInWithPopup(provider);
+            let user = result.user;
             if (user.email === CORREO_ADMIN) {
                 localStorage.setItem("admin_logged", "true");
                 location.reload();
@@ -762,18 +712,18 @@
         } catch (error) {
             alert("Error: " + error.message);
         }
-    };
+    }
     
-    window.logoutUser = async function() {
+    async function logoutUser() {
         await auth.signOut();
         localStorage.removeItem("admin_logged");
         location.reload();
-    };
+    }
     
-    // Inicialización
+    // ========== INICIALIZACIÓN ==========
     document.addEventListener("DOMContentLoaded", async () => {
         initDarkMode();
-        actualizarLinks();
+        actualizarLinksCatalogo();
         await cargarProductos();
         await cargarVideos();
         await cargarCupones();
@@ -788,7 +738,7 @@
             };
         });
         
-        // Filtros
+        // Filtros marca
         document.querySelectorAll("[data-marca]").forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active"));
@@ -801,6 +751,7 @@
             };
         });
         
+        // Filtros género
         document.querySelectorAll("[data-genero]").forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
@@ -810,6 +761,7 @@
             };
         });
         
+        // Eventos generales
         document.getElementById("ordenSelect").onchange = (e) => { ordenActual = e.target.value; renderizarPublico(); };
         document.getElementById("searchInput").oninput = (e) => { busquedaActual = e.target.value; renderizarPublico(); };
         document.getElementById("cartBtn").onclick = () => document.getElementById("cartSidebar").classList.add("open");
@@ -817,17 +769,19 @@
         document.getElementById("whatsappBtn").onclick = enviarWhatsApp;
         document.getElementById("aplicarCuponBtn").onclick = aplicarCupon;
         document.getElementById("btnGuardar").onclick = guardarProductoForm;
-        document.getElementById("btnCancelar").onclick = limpiarForm;
+        document.getElementById("btnCancelar").onclick = limpiarFormProducto;
         document.getElementById("btnAddVideo").onclick = agregarVideo;
         document.getElementById("btnAgregarCupon").onclick = agregarCupon;
         document.getElementById("guardarLinksBtn").onclick = guardarLinksManual;
+        document.getElementById("googleLoginBtnClick").onclick = loginWithGoogle;
+        document.getElementById("btnLogout").onclick = logoutUser;
         
-        // Auth
+        // Auth state
         auth.onAuthStateChanged((user) => {
-            const adminPanel = document.getElementById("adminPanel");
-            const btnLogin = document.getElementById("googleLoginBtn");
-            const btnLogout = document.getElementById("btnLogout");
-            const userEmail = document.getElementById("userEmailDisplay");
+            let adminPanel = document.getElementById("adminPanel");
+            let btnLogin = document.getElementById("googleLoginBtn");
+            let btnLogout = document.getElementById("btnLogout");
+            let userEmail = document.getElementById("userEmailDisplay");
             if (user && user.email === CORREO_ADMIN) {
                 if (adminPanel) adminPanel.classList.add("show");
                 if (btnLogin) btnLogin.style.display = "none";
