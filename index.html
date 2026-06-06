@@ -406,9 +406,18 @@ function comprarAhora(id) {
     if (!p || p.stock <= 0) { alert("Producto sin stock"); return; }
     p.stock--;
     db.collection("productos").doc(p.firestoreId).update({ stock: p.stock });
-    let msg = `PEDIDO LILIA NATURA & AVON%0A%0A- ${p.nombre}%0A   ${p.precio} x 1 = ${p.precio}%0A%0ATOTAL: ${p.precio}%0A%0AHola! Quiero comprar este producto. Me confirmas disponibilidad?`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-    alert("Pedido enviado");
+    
+    // Construir mensaje correctamente
+    let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
+    mensaje += `- ${p.nombre}\n`;
+    mensaje += `   ${p.precio} x 1 = ${p.precio}\n\n`;
+    mensaje += `TOTAL: ${p.precio}\n\n`;
+    mensaje += `Hola! Quiero comprar este producto. Me confirmas disponibilidad?`;
+    
+    // Codificar para URL
+    const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, '_blank');
+    alert("Pedido enviado! Stock actualizado.");
 }
 
 async function isCuponUsado(codigo) {
