@@ -258,9 +258,8 @@
         </div>
     </div>
 
-    <!-- FILTROS: NUEVA ESTRUCTURA -->
+    <!-- FILTROS -->
     <div class="filtros filtros-columna">
-        <!-- Fila 1: Marcas + Género -->
         <div class="fila-filtros">
             <button class="cat-btn active" data-marca="all" data-genero="all">Todos</button>
             <button class="cat-btn cat-principal avon" data-marca="Avon" data-genero="all">Avon</button>
@@ -271,10 +270,8 @@
             <button class="cat-btn" data-genero="Unisex" data-marca="all">👥 Unisex</button>
         </div>
         
-        <!-- Fila 2: Subcategorías (solo visible cuando se selecciona Avon o Natura) -->
         <div id="subcategoriasContainer" class="subcategoria-container"></div>
         
-        <!-- Orden -->
         <div class="fila-filtros" style="justify-content: flex-end;">
             <select id="ordenSelect" class="orden-select">
                 <option value="nombre">Ordenar por nombre</option>
@@ -292,7 +289,6 @@
     <div id="catalogoPublico" class="catalogo"></div>
 </div>
 
-<!-- Modal para imagen ampliada -->
 <div id="imageModal" class="image-modal" onclick="closeImageModal()">
     <button class="close-modal" onclick="closeImageModal()">✕</button>
     <img id="modalImage" src="" alt="Imagen ampliada">
@@ -530,30 +526,46 @@
         const tabs = document.querySelectorAll(".tab-btn");
         tabs.forEach(tab => { tab.addEventListener("click", function() { tabs.forEach(t => t.classList.remove("active")); this.classList.add("active"); document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active")); document.getElementById(this.dataset.tab).classList.add("active"); }); });
         
-        // Botones de marca
-        document.querySelectorAll("[data-marca]").forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active"));
-                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+        // Botones de marca - CORREGIDOS
+        const marcaBtns = document.querySelectorAll("[data-marca]");
+        marcaBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                // Remover active de todos los botones de marca
+                marcaBtns.forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
+                
+                // Actualizar marcaActual
                 marcaActual = btn.dataset.marca;
+                console.log("Marca seleccionada:", marcaActual);
+                
+                // Resetear categoría
                 categoriaActual = "all";
-                // Resetear género al cambiar marca
+                
+                // Resetear género a "all" visualmente
                 generoActual = "all";
-                document.querySelector(`[data-genero="all"]`).classList.add("active");
+                const generoBtns = document.querySelectorAll("[data-genero]");
+                generoBtns.forEach(b => b.classList.remove("active"));
+                const generoAllBtn = document.querySelector('[data-genero="all"]');
+                if (generoAllBtn) generoAllBtn.classList.add("active");
+                
+                // Mostrar/ocultar subcategorías
                 actualizarSubcategorias();
+                
+                // Refrescar productos
                 renderizarPublico();
-            };
+            });
         });
         
         // Botones de género
-        document.querySelectorAll("[data-genero]").forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+        const generoBtns = document.querySelectorAll("[data-genero]");
+        generoBtns.forEach(btn => {
+            btn.addEventListener("click", () => {
+                generoBtns.forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 generoActual = btn.dataset.genero;
+                console.log("Género seleccionado:", generoActual);
                 renderizarPublico();
-            };
+            });
         });
         
         document.getElementById("ordenSelect").onchange = (e) => { ordenActual = e.target.value; renderizarPublico(); };
