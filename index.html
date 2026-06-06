@@ -53,19 +53,18 @@
                 const adminPanel = document.getElementById("adminPanel");
                 const btnLogin = document.getElementById("googleLoginBtn");
                 const btnLogout = document.getElementById("btnLogout");
-                const adminLinkEditor = document.getElementById("adminLinkEditor");
                 
                 if (user && CORREOS_PERMITIDOS.includes(user.email)) {
                     if (adminPanel) adminPanel.classList.add("show");
                     if (btnLogin) btnLogin.style.display = "none";
                     if (btnLogout) btnLogout.style.display = "inline-block";
-                    if (adminLinkEditor) adminLinkEditor.style.display = "block";
                     document.getElementById("userEmailDisplay").innerHTML = user.email;
+                    document.getElementById("linkNaturaInput").value = catalogoNaturaUrl;
+                    document.getElementById("linkAvonInput").value = catalogoAvonUrl;
                 } else {
                     if (adminPanel) adminPanel.classList.remove("show");
                     if (btnLogin) btnLogin.style.display = "block";
                     if (btnLogout) btnLogout.style.display = "none";
-                    if (adminLinkEditor) adminLinkEditor.style.display = "none";
                 }
             });
         };
@@ -121,19 +120,25 @@
         .producto-item { background: var(--border-light); border-radius: 20px; padding: 15px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         
         .filtros { background: var(--card-bg); border-radius: 20px; padding: 20px; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; }
-        .categoria-filtro { display: flex; gap: 10px; flex-wrap: wrap; }
-        .cat-principal { font-weight: bold; background: var(--accent); color: white; border: none; }
-        .cat-principal.active, .cat-principal:hover { background: var(--accent-dark); }
-        .cat-btn { padding: 8px 16px; border: 2px solid var(--accent); background: transparent; color: var(--accent); border-radius: 30px; cursor: pointer; transition: all 0.3s; }
+        .filtros-columna { flex-direction: column; align-items: stretch; gap: 15px; }
+        .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .cat-btn { padding: 8px 16px; border: 2px solid var(--accent); background: transparent; color: var(--accent); border-radius: 30px; cursor: pointer; transition: all 0.3s; font-size: 0.85rem; }
         .cat-btn.active, .cat-btn:hover { background: var(--accent); color: white; }
+        .cat-principal { font-weight: bold; color: white; border: none; }
+        .cat-principal.avon { background: var(--avon-color); }
+        .cat-principal.natura { background: var(--natura-color); }
+        .subcategoria-container { display: none; gap: 10px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border-light); }
+        .subcategoria-container.show { display: flex; }
         .orden-select { padding: 8px 16px; border: 2px solid var(--border-light); border-radius: 30px; background: var(--input-bg); color: var(--text-primary); cursor: pointer; }
         
         .catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 30px; }
         .producto-card { background: var(--product-card); border-radius: 25px; overflow: hidden; box-shadow: 0 10px 30px var(--shadow); transition: all 0.3s; position: relative; }
         .producto-card:hover { transform: translateY(-8px); }
+        .producto-imagen { width: 100%; height: 250px; object-fit: cover; cursor: pointer; transition: transform 0.2s; }
+        .producto-imagen:hover { transform: scale(1.02); }
         .destacado-badge { position: absolute; top: 15px; left: 15px; background: #f39c12; color: white; padding: 5px 12px; border-radius: 30px; font-size: 0.8rem; font-weight: bold; z-index: 1; display: flex; align-items: center; gap: 5px; }
         .descuento-badge { position: absolute; top: 15px; right: 15px; background: #e74c3c; color: white; padding: 5px 12px; border-radius: 30px; font-size: 0.9rem; font-weight: bold; z-index: 1; }
-        .producto-imagen { width: 100%; height: 250px; object-fit: cover; }
+        .genero-badge { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; z-index: 1; }
         .producto-info { padding: 20px; }
         .producto-nombre { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 8px; }
         .producto-categoria { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 10px; }
@@ -141,6 +146,23 @@
         .producto-precio { font-size: 1.3rem; font-weight: bold; color: #2ecc71; margin: 8px 0; }
         .producto-stock { font-size: 0.85rem; color: var(--text-primary); padding: 5px 12px; background: var(--border-light); border-radius: 20px; display: inline-block; }
         .btn-carrito { width: 100%; margin-top: 10px; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            cursor: pointer;
+            justify-content: center;
+            align-items: center;
+        }
+        .image-modal.show { display: flex; }
+        .image-modal img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 20px; }
+        .image-modal .close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; background: none; border: none; }
         
         .stock-section { background: var(--card-bg); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
         .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
@@ -170,7 +192,7 @@
         .dark-mode-btn { background: var(--card-bg); border: 2px solid var(--accent); border-radius: 50px; padding: 8px 16px; cursor: pointer; font-size: 1.2rem; }
         .google-btn { background: white; border: 1px solid #dadce0; border-radius: 40px; padding: 8px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500; color: #3c4043; }
         .google-btn:hover { background: #f8f9fa; }
-        @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .filtros { flex-direction: column; } .catalogos-container { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .catalogos-container { grid-template-columns: 1fr; } .fila-filtros { justify-content: center; } }
     </style>
 </head>
 <body>
@@ -208,6 +230,7 @@
             <div class="form-grid">
                 <div class="form-group"><label>Nombre</label><input type="text" id="prodNombre" placeholder="Ej: Jabon de Rosa"></div>
                 <div class="form-group"><label>Marca</label><select id="prodMarca"><option value="Natura">Natura</option><option value="Avon">Avon</option></select></div>
+                <div class="form-group"><label>Tipo de producto</label><select id="prodGenero"><option value="Mujer">Mujer</option><option value="Hombre">Hombre</option><option value="Infantil">Infantil</option><option value="Unisex">Unisex</option></select></div>
                 <div class="form-group"><label>Categoria</label><select id="prodCategoria"><option value="Perfumes">Perfumes</option><option value="Jabones">Jabones</option><option value="Cremas">Cremas</option><option value="Maquillaje">Maquillaje</option><option value="Cabello">Cabello</option><option value="Otros">Otros</option></select></div>
                 <div class="form-group"><label>Mi precio</label><input type="text" id="prodPrecio" placeholder="$8000"></div>
                 <div class="form-group"><label>Precio referencia</label><input type="text" id="prodPrecioRef" placeholder="$10000"></div>
@@ -235,14 +258,31 @@
         </div>
     </div>
 
-    <div class="filtros">
-        <div class="categoria-filtro" id="categoriaFiltros">
-            <button class="cat-btn active" data-marca="all" data-cat="all">Todos</button>
-            <button class="cat-btn cat-principal" data-marca="Natura" data-cat="all">Natura</button>
-            <button class="cat-btn cat-principal" data-marca="Avon" data-cat="all">Avon</button>
-            <div id="subcategoriasContainer" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+    <!-- FILTROS: NUEVA ESTRUCTURA -->
+    <div class="filtros filtros-columna">
+        <!-- Fila 1: Marcas + Género -->
+        <div class="fila-filtros">
+            <button class="cat-btn active" data-marca="all" data-genero="all">Todos</button>
+            <button class="cat-btn cat-principal avon" data-marca="Avon" data-genero="all">Avon</button>
+            <button class="cat-btn cat-principal natura" data-marca="Natura" data-genero="all">Natura</button>
+            <button class="cat-btn" data-genero="Mujer" data-marca="all">👩 Mujer</button>
+            <button class="cat-btn" data-genero="Hombre" data-marca="all">👨 Hombre</button>
+            <button class="cat-btn" data-genero="Infantil" data-marca="all">🧒 Infantil</button>
+            <button class="cat-btn" data-genero="Unisex" data-marca="all">👥 Unisex</button>
         </div>
-        <select id="ordenSelect" class="orden-select"><option value="nombre">Ordenar por nombre</option><option value="destacado">Destacados primero ⭐</option><option value="precio-menor">Precio: menor a mayor</option><option value="precio-mayor">Precio: mayor a menor</option></select>
+        
+        <!-- Fila 2: Subcategorías (solo visible cuando se selecciona Avon o Natura) -->
+        <div id="subcategoriasContainer" class="subcategoria-container"></div>
+        
+        <!-- Orden -->
+        <div class="fila-filtros" style="justify-content: flex-end;">
+            <select id="ordenSelect" class="orden-select">
+                <option value="nombre">Ordenar por nombre</option>
+                <option value="destacado">Destacados primero ⭐</option>
+                <option value="precio-menor">Precio: menor a mayor</option>
+                <option value="precio-mayor">Precio: mayor a menor</option>
+            </select>
+        </div>
     </div>
 
     <div class="buscador-wrapper"><div style="position:absolute; left:20px; top:50%; transform:translateY(-50%);">🔍</div><input type="text" id="searchInput" placeholder="Buscar productos..."></div>
@@ -250,6 +290,12 @@
     <div class="stock-section"><h2>Mi Stock</h2><div id="videosPublicos" class="videos-grid"></div></div>
 
     <div id="catalogoPublico" class="catalogo"></div>
+</div>
+
+<!-- Modal para imagen ampliada -->
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <button class="close-modal" onclick="closeImageModal()">✕</button>
+    <img id="modalImage" src="" alt="Imagen ampliada">
 </div>
 
 <div class="cart-floating"><div class="cart-btn" id="cartBtn">🛒<span class="cart-count" id="cartCount">0</span></div></div>
@@ -262,15 +308,28 @@
 </div>
 
 <script>
-    let productos = [], videos = [], isAdmin = false;
+    let productos = [], videos = [];
     let catalogoNaturaUrl = "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
     let catalogoAvonUrl = "https://www.avon.com.ar/catalogo";
     let editandoId = null;
     let carrito = [];
     let marcaActual = "all";
     let categoriaActual = "all";
+    let generoActual = "all";
     let ordenActual = "nombre";
     let busquedaActual = "";
+
+    function openImageModal(imageUrl) {
+        const modal = document.getElementById("imageModal");
+        const modalImg = document.getElementById("modalImage");
+        modalImg.src = imageUrl;
+        modal.classList.add("show");
+    }
+    
+    function closeImageModal() {
+        const modal = document.getElementById("imageModal");
+        modal.classList.remove("show");
+    }
 
     function initDarkMode() {
         const darkMode = localStorage.getItem("darkMode") === "true";
@@ -349,30 +408,49 @@
 
     function actualizarSubcategorias() {
         const container = document.getElementById("subcategoriasContainer");
-        if (marcaActual === "all") { container.innerHTML = ""; return; }
         const categorias = ["Perfumes", "Jabones", "Cremas", "Maquillaje", "Cabello", "Otros"];
+        
+        if (marcaActual === "all") {
+            container.classList.remove("show");
+            container.innerHTML = "";
+            return;
+        }
+        
+        container.classList.add("show");
         container.innerHTML = categorias.map(cat => `<button class="cat-btn subcategoria-filtro ${categoriaActual === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`).join('');
-        document.querySelectorAll(".subcategoria-filtro").forEach(btn => { btn.onclick = () => { document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active")); btn.classList.add("active"); categoriaActual = btn.dataset.cat; renderizarPublico(); }; });
+        
+        document.querySelectorAll(".subcategoria-filtro").forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                categoriaActual = btn.dataset.cat;
+                renderizarPublico();
+            };
+        });
     }
 
     function renderizarAdmin() {
         let activos = productos.filter(p => p.stock > 0);
         let agotados = productos.filter(p => p.stock === 0);
-        document.getElementById("listaActivos").innerHTML = activos.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | Stock: ${p.stock} | ${p.marca} - ${p.categoria}</div><div><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button> <button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos activos</p>";
-        document.getElementById("listaAgotados").innerHTML = agotados.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | AGOTADO | ${p.marca} - ${p.categoria}</div><div><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button> <button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos agotados</p>";
+        document.getElementById("listaActivos").innerHTML = activos.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | Stock: ${p.stock} | ${p.marca} - ${p.categoria} | ${p.genero || 'Mujer'}</div><div><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button> <button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos activos</p>";
+        document.getElementById("listaAgotados").innerHTML = agotados.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | AGOTADO | ${p.marca} - ${p.categoria} | ${p.genero || 'Mujer'}</div><div><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button> <button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos agotados</p>";
         document.getElementById("listaVideosAdmin").innerHTML = videos.map((v,i) => `<div class="producto-item"><div><strong>${v.titulo}</strong><br>${v.url.substring(0,50)}</div><button class="btn btn-danger" onclick="eliminarVideo(${i})">Eliminar</button></div>`).join('') || "<p>No hay videos</p>";
     }
 
     function renderizarPublico() {
         let filtrados = productos.filter(p => p.stock > 0);
+        
         if (marcaActual !== "all") filtrados = filtrados.filter(p => p.marca === marcaActual);
         if (categoriaActual !== "all") filtrados = filtrados.filter(p => p.categoria === categoriaActual);
+        if (generoActual !== "all") filtrados = filtrados.filter(p => p.genero === generoActual);
         if (busquedaActual) filtrados = filtrados.filter(p => p.nombre.toLowerCase().includes(busquedaActual.toLowerCase()));
         
         if (ordenActual === "destacado") filtrados.sort((a,b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
         else if (ordenActual === "nombre") filtrados.sort((a,b) => a.nombre.localeCompare(b.nombre));
         else if (ordenActual === "precio-menor") filtrados.sort((a,b) => (parseInt(a.precio.replace(/[^0-9]/g,'')) || 0) - (parseInt(b.precio.replace(/[^0-9]/g,'')) || 0));
         else if (ordenActual === "precio-mayor") filtrados.sort((a,b) => (parseInt(b.precio.replace(/[^0-9]/g,'')) || 0) - (parseInt(a.precio.replace(/[^0-9]/g,'')) || 0));
+        
+        const generoIconos = { "Mujer": "👩", "Hombre": "👨", "Infantil": "🧒", "Unisex": "👥" };
         
         document.getElementById("catalogoPublico").innerHTML = filtrados.map(p => {
             let descuento = null;
@@ -381,10 +459,12 @@
                 let precioRefNum = parseInt(p.precioRef.replace(/[^0-9]/g,'')) || 0;
                 if (precioRefNum > precioNum) descuento = Math.round(((precioRefNum - precioNum) / precioRefNum) * 100);
             }
+            const generoIcono = generoIconos[p.genero] || "👩";
             return `<div class="producto-card">
                 ${p.destacado ? `<div class="destacado-badge">⭐ Destacado</div>` : ''}
                 ${descuento ? `<div class="descuento-badge">-${descuento}%</div>` : ''}
-                <img class="producto-imagen" src="${p.imagen || 'https://placehold.co/400x300?text=Producto'}" onerror="this.src='https://placehold.co/400x300?text=Error'">
+                <div class="genero-badge">${generoIcono} ${p.genero || 'Mujer'}</div>
+                <img class="producto-imagen" src="${p.imagen || 'https://placehold.co/400x300?text=Producto'}" onerror="this.src='https://placehold.co/400x300?text=Error'" onclick="openImageModal('${p.imagen || 'https://placehold.co/400x300?text=Producto'}')">
                 <div class="producto-info">
                     <div class="producto-nombre">${p.marca} - ${p.nombre}</div>
                     <div class="producto-categoria">${p.categoria}</div>
@@ -402,6 +482,7 @@
     function guardarProducto() {
         let nombre = document.getElementById("prodNombre").value.trim();
         let marca = document.getElementById("prodMarca").value;
+        let genero = document.getElementById("prodGenero").value;
         let categoria = document.getElementById("prodCategoria").value;
         let precio = document.getElementById("prodPrecio").value.trim();
         let precioRef = document.getElementById("prodPrecioRef").value.trim();
@@ -411,8 +492,8 @@
         let archivo = document.getElementById("prodImagenFile").files[0];
         if (!nombre || !precio) { alert("Completá nombre y precio"); return; }
         let guardar = (imgFinal) => {
-            if (editandoId !== null) { let idx = productos.findIndex(p => p.id === editandoId); if (idx !== -1) productos[idx] = { ...productos[idx], nombre, marca, categoria, precio, precioRef, stock, destacado, imagen: imgFinal }; editandoId = null; }
-            else { productos.push({ id: Date.now(), nombre, marca, categoria, precio, precioRef, stock, destacado, imagen: imgFinal || "https://placehold.co/400x300?text=Producto" }); }
+            if (editandoId !== null) { let idx = productos.findIndex(p => p.id === editandoId); if (idx !== -1) productos[idx] = { ...productos[idx], nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imgFinal }; editandoId = null; }
+            else { productos.push({ id: Date.now(), nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imgFinal || "https://placehold.co/400x300?text=Producto" }); }
             guardarTodo(); limpiarForm(); renderizarAdmin(); renderizarPublico(); document.getElementById("btnCancelar").style.display = "none"; alert("Producto guardado");
         };
         if (archivo) { let r = new FileReader(); r.onload = e => guardar(e.target.result); r.readAsDataURL(archivo); }
@@ -425,6 +506,7 @@
         editandoId = id; 
         document.getElementById("prodNombre").value = p.nombre; 
         document.getElementById("prodMarca").value = p.marca; 
+        document.getElementById("prodGenero").value = p.genero || "Mujer";
         document.getElementById("prodCategoria").value = p.categoria; 
         document.getElementById("prodPrecio").value = p.precio; 
         document.getElementById("prodPrecioRef").value = p.precioRef || ""; 
@@ -435,7 +517,7 @@
         document.getElementById("btnGuardar").textContent = "Actualizar"; 
     }
     function eliminarProducto(id) { if(confirm("Eliminar?")) { productos = productos.filter(p => p.id !== id); guardarTodo(); renderizarAdmin(); renderizarPublico(); } }
-    function limpiarForm() { document.getElementById("prodNombre").value = ""; document.getElementById("prodMarca").value = "Natura"; document.getElementById("prodCategoria").value = "Perfumes"; document.getElementById("prodPrecio").value = ""; document.getElementById("prodPrecioRef").value = ""; document.getElementById("prodStock").value = ""; document.getElementById("prodDestacado").checked = false; document.getElementById("prodImagen").value = ""; document.getElementById("prodImagenFile").value = ""; editandoId = null; document.getElementById("btnGuardar").textContent = "Guardar"; document.getElementById("btnCancelar").style.display = "none"; }
+    function limpiarForm() { document.getElementById("prodNombre").value = ""; document.getElementById("prodMarca").value = "Natura"; document.getElementById("prodGenero").value = "Mujer"; document.getElementById("prodCategoria").value = "Perfumes"; document.getElementById("prodPrecio").value = ""; document.getElementById("prodPrecioRef").value = ""; document.getElementById("prodStock").value = ""; document.getElementById("prodDestacado").checked = false; document.getElementById("prodImagen").value = ""; document.getElementById("prodImagenFile").value = ""; editandoId = null; document.getElementById("btnGuardar").textContent = "Guardar"; document.getElementById("btnCancelar").style.display = "none"; }
     function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if(!t || !u) { alert("Completá título y URL"); return; } videos.push({titulo:t, url:u}); guardarTodo(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; renderizarAdmin(); renderizarPublico(); alert("Video agregado"); }
     function eliminarVideo(i) { if(confirm("Eliminar video?")) { videos.splice(i,1); guardarTodo(); renderizarAdmin(); renderizarPublico(); } }
     function exportarDatos() { let d = { productos, videos, catalogoNaturaUrl, catalogoAvonUrl }; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)])); a.download = "lilia_backup.json"; a.click(); }
@@ -444,10 +526,35 @@
     document.addEventListener("DOMContentLoaded", () => {
         initDarkMode(); cargarDatos(); renderizarAdmin(); renderizarPublico();
         
+        // Tabs
         const tabs = document.querySelectorAll(".tab-btn");
         tabs.forEach(tab => { tab.addEventListener("click", function() { tabs.forEach(t => t.classList.remove("active")); this.classList.add("active"); document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active")); document.getElementById(this.dataset.tab).classList.add("active"); }); });
         
-        document.querySelectorAll("[data-marca]").forEach(btn => { btn.onclick = () => { document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active")); btn.classList.add("active"); marcaActual = btn.dataset.marca; categoriaActual = "all"; actualizarSubcategorias(); renderizarPublico(); }; });
+        // Botones de marca
+        document.querySelectorAll("[data-marca]").forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                marcaActual = btn.dataset.marca;
+                categoriaActual = "all";
+                // Resetear género al cambiar marca
+                generoActual = "all";
+                document.querySelector(`[data-genero="all"]`).classList.add("active");
+                actualizarSubcategorias();
+                renderizarPublico();
+            };
+        });
+        
+        // Botones de género
+        document.querySelectorAll("[data-genero]").forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                generoActual = btn.dataset.genero;
+                renderizarPublico();
+            };
+        });
         
         document.getElementById("ordenSelect").onchange = (e) => { ordenActual = e.target.value; renderizarPublico(); };
         document.getElementById("searchInput").oninput = (e) => { busquedaActual = e.target.value; renderizarPublico(); };
@@ -468,6 +575,8 @@
         window.actualizarCantidad = actualizarCantidad;
         window.editarProducto = editarProducto;
         window.eliminarProducto = eliminarProducto;
+        window.openImageModal = openImageModal;
+        window.closeImageModal = closeImageModal;
         
         actualizarSubcategorias();
     });
