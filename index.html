@@ -60,11 +60,13 @@
                     if (btnLogout) btnLogout.style.display = "inline-block";
                     document.getElementById("userEmailDisplay").innerHTML = user.email;
                     
-                    // Cargar los valores actuales en los inputs
-                    const naturaLink = localStorage.getItem("lilia_catalogo_natura") || catalogoNaturaUrl;
-                    const avonLink = localStorage.getItem("lilia_catalogo_avon") || catalogoAvonUrl;
-                    document.getElementById("linkNaturaInput").value = naturaLink;
-                    document.getElementById("linkAvonInput").value = avonLink;
+                    // Cargar los valores actuales en los inputs DESPUÉS de que cargarDatos() se ejecute
+                    setTimeout(() => {
+                        const naturaLink = localStorage.getItem("lilia_catalogo_natura");
+                        const avonLink = localStorage.getItem("lilia_catalogo_avon");
+                        if (naturaLink) document.getElementById("linkNaturaInput").value = naturaLink;
+                        if (avonLink) document.getElementById("linkAvonInput").value = avonLink;
+                    }, 100);
                 } else {
                     if (adminPanel) adminPanel.classList.remove("show");
                     if (btnLogin) btnLogin.style.display = "block";
@@ -352,19 +354,21 @@
         productos = JSON.parse(localStorage.getItem("lilia_productos") || "[]");
         videos = JSON.parse(localStorage.getItem("lilia_videos") || "[]");
         
+        // Cargar URLs de los catálogos desde localStorage
         const savedNaturaUrl = localStorage.getItem("lilia_catalogo_natura");
         const savedAvonUrl = localStorage.getItem("lilia_catalogo_avon");
-        if (savedNaturaUrl) catalogoNaturaUrl = savedNaturaUrl;
-        if (savedAvonUrl) catalogoAvonUrl = savedAvonUrl;
+        
+        if (savedNaturaUrl) {
+            catalogoNaturaUrl = savedNaturaUrl;
+        }
+        if (savedAvonUrl) {
+            catalogoAvonUrl = savedAvonUrl;
+        }
         
         carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
         
         // Actualizar los links en la interfaz
-        document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
-        document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
-        document.getElementById("catalogoNaturaLink").textContent = "Ver catalogo →";
-        document.getElementById("catalogoAvonLink").textContent = "Ver catalogo →";
-        
+        actualizarLinksCatalogo();
         actualizarCarritoUI();
     }
 
@@ -377,8 +381,10 @@
     }
 
     function actualizarLinksCatalogo() {
-        document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
-        document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
+        const naturaLink = document.getElementById("catalogoNaturaLink");
+        const avonLink = document.getElementById("catalogoAvonLink");
+        if (naturaLink) naturaLink.href = catalogoNaturaUrl;
+        if (avonLink) avonLink.href = catalogoAvonUrl;
     }
 
     function agregarAlCarrito(id) {
@@ -541,7 +547,10 @@
 
     // ========== EVENTOS ==========
     document.addEventListener("DOMContentLoaded", () => {
-        initDarkMode(); cargarDatos(); renderizarAdmin(); renderizarPublico();
+        initDarkMode(); 
+        cargarDatos(); 
+        renderizarAdmin(); 
+        renderizarPublico();
         
         // Tabs
         const tabs = document.querySelectorAll(".tab-btn");
@@ -604,6 +613,8 @@
             actualizarLinksCatalogo();
             guardarTodo();
             alert("Links actualizados correctamente");
+            console.log("Natura URL:", catalogoNaturaUrl);
+            console.log("Avon URL:", catalogoAvonUrl);
         };
         
         window.agregarAlCarrito = agregarAlCarrito;
