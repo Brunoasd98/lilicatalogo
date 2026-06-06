@@ -401,20 +401,27 @@ function actualizarCantidad(id, nueva) {
     }
 }
 
-function comprarAhora(id) {
+async function comprarAhora(id) {
     let p = productos.find(p => p.firestoreId === id);
     if (!p || p.stock <= 0) { alert("Producto sin stock"); return; }
-    p.stock--;
-    db.collection("productos").doc(p.firestoreId).update({ stock: p.stock });
     
-    // Construir mensaje correctamente
+    // Restar stock localmente
+    p.stock--;
+    
+    // Actualizar en Firestore
+    await db.collection("productos").doc(p.firestoreId).update({ stock: p.stock });
+    
+    // Recargar productos desde Firestore para sincronizar
+    await cargarProductos();
+    
+    // Construir mensaje
     let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
     mensaje += `- ${p.nombre}\n`;
     mensaje += `   ${p.precio} x 1 = ${p.precio}\n\n`;
     mensaje += `TOTAL: ${p.precio}\n\n`;
     mensaje += `Hola! Quiero comprar este producto. Me confirmas disponibilidad?`;
     
-    // Codificar para URL
+    // Abrir WhatsApp
     const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
     alert("Pedido enviado! Stock actualizado.");
@@ -452,6 +459,7 @@ async function aplicarCupon() {
 async function enviarWhatsApp() {
     if (carrito.length === 0) { alert("Carrito vacío"); return; }
     
+    // Restar stock y actualizar en Firestore
     for (let item of carrito) {
         let p = productos.find(p => p.firestoreId === item.id);
         if (p && p.stock >= item.cantidad) {
@@ -460,6 +468,10 @@ async function enviarWhatsApp() {
         }
     }
     
+    // Recargar productos para sincronizar
+    await cargarProductos();
+    
+    // Construir mensaje
     let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
     let subtotal = 0;
     
@@ -484,6 +496,7 @@ async function enviarWhatsApp() {
     mensaje += `TOTAL: $${total.toLocaleString()}\n\n`;
     mensaje += `Hola! Quiero hacer este pedido. Me confirmas disponibilidad?`;
     
+    // Limpiar carrito
     carrito = [];
     cuponAplicado = null;
     document.getElementById("cuponInfo").innerHTML = "";
@@ -491,8 +504,7 @@ async function enviarWhatsApp() {
     localStorage.setItem("lilia_carrito", JSON.stringify(carrito));
     actualizarCarritoUI();
     
-    setTimeout(() => { cargarProductos(); cargarCupones(); }, 500);
-    
+    // Abrir WhatsApp
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
     alert("Pedido enviado! El stock se ha actualizado.");
 }
