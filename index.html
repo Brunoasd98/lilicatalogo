@@ -4,26 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Lilia Natura & Avon - Catálogo Oficial</title>
-    <!-- Firebase SDK -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
+        // Firebase config
         const firebaseConfig = {
             apiKey: "AIzaSyB4l7EZIsVcZlnKB0H8UH7L3uiJ5ybf6lc",
             authDomain: "lilia-catalogo.firebaseapp.com",
             projectId: "lilia-catalogo",
             storageBucket: "lilia-catalogo.firebasestorage.app",
             messagingSenderId: "846476027363",
-            appId: "1:846476027363:web:123456789"
+            appId: "1:846476027363:web:f85192e2c3022f5bcf6cd6",
+            measurementId: "G-Z5Y7QJCH2P"
         };
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
         
         const CORREOS_PERMITIDOS = ["brunoromero637@gmail.com"];
         
+        // Variables globales
+        window.productos = [];
+        window.videos = [];
+        window.cupones = [];
+        window.carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
+        window.cuponAplicado = null;
+        window.cuponesUsados = JSON.parse(localStorage.getItem("lilia_cupones_usados") || "[]");
+        
+        // Funciones de Firestore
+        async function cargarProductosFirestore() {
+            const querySnapshot = await getDocs(collection(db, "productos"));
+            window.productos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Productos cargados:", window.productos.length);
+            if (window.renderizarPublico) window.renderizarPublico();
+            if (window.renderizarAdmin) window.renderizarAdmin();
+        }
+        
+        async function guardarProductoFirestore(producto) {
+            if (producto.id && producto.id.toString().length > 10) {
+                // Editar existente
+                const docRef = doc(db, "productos", producto.id);
+                await updateDoc(docRef, producto);
+            } else {
+                // Nuevo producto
+                const { id, ...data } = producto;
+                await addDoc(collection(db, "productos"), data);
+            }
+            await cargarProductosFirestore();
+        }
+        
+        async function eliminarProductoFirestore(id) {
+            await deleteDoc(doc(db, "productos", id));
+            await cargarProductosFirestore();
+        }
+        
+        async function cargarVideosFirestore() {
+            const querySnapshot = await getDocs(collection(db, "videos"));
+            window.videos = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (window.renderizarPublico) window.renderizarPublico();
+            if (window.renderizarAdmin) window.renderizarAdmin();
+        }
+        
+        async function guardarVideoFirestore(video) {
+            await addDoc(collection(db, "videos"), video);
+            await cargarVideosFirestore();
+        }
+        
+        async function eliminarVideoFirestore(id) {
+            await deleteDoc(doc(db, "videos", id));
+            await cargarVideosFirestore();
+        }
+        
+        async function cargarCuponesFirestore() {
+            const querySnapshot = await getDocs(collection(db, "cupones"));
+            window.cupones = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (window.renderizarAdmin) window.renderizarAdmin();
+        }
+        
+        async function guardarCuponFirestore(cupon) {
+            await addDoc(collection(db, "cupones"), cupon);
+            await cargarCuponesFirestore();
+        }
+        
+        async function eliminarCuponFirestore(id) {
+            await deleteDoc(doc(db, "cupones", id));
+            await cargarCuponesFirestore();
+        }
+        
+        // Login Google
         window.loginWithGoogle = async function() {
             try {
                 const result = await signInWithPopup(auth, provider);
@@ -59,7 +132,6 @@
                     if (btnLogin) btnLogin.style.display = "none";
                     if (btnLogout) btnLogout.style.display = "inline-block";
                     document.getElementById("userEmailDisplay").innerHTML = user.email;
-                    
                     const naturaLink = localStorage.getItem("lilia_catalogo_natura");
                     const avonLink = localStorage.getItem("lilia_catalogo_avon");
                     if (naturaLink) document.getElementById("linkNaturaInput").value = naturaLink;
@@ -72,7 +144,21 @@
             });
         };
         
-        window.checkAuth();
+        // Cargar datos al iniciar
+        async function inicializar() {
+            await cargarProductosFirestore();
+            await cargarVideosFirestore();
+            await cargarCuponesFirestore();
+            window.checkAuth();
+            
+            // Actualizar UI
+            setTimeout(() => {
+                if (window.actualizarCarritoUI) window.actualizarCarritoUI();
+                if (window.actualizarSubcategorias) window.actualizarSubcategorias();
+            }, 100);
+        }
+        
+        window.inicializar = inicializar;
     </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -99,7 +185,6 @@
         .btn-danger { background: #e74c3c; color: white; }
         .btn-warning { background: #f39c12; color: white; }
         .btn-comprar { background: #2193b0; color: white; }
-        .btn-comprar:hover { background: #1b7a94; }
         
         .catalogos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
         .catalogo-card { background: linear-gradient(135deg, var(--natura-color) 0%, #d46b03 100%); border-radius: 30px; padding: 25px; text-align: center; position: relative; overflow: hidden; }
@@ -319,80 +404,159 @@
     <div style="padding:20px;"><button class="btn btn-success" id="whatsappBtn" style="width:100%;">Enviar por WhatsApp</button></div>
 </div>
 
-<script>
-    let productos = [], videos = [], cupones = [];
-    let catalogoNaturaUrl = "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
-    let catalogoAvonUrl = "https://www.avon.com.ar/catalogo";
-    let editandoId = null;
-    let carrito = [];
+<script type="module">
+    // Importar funciones globales
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyB4l7EZIsVcZlnKB0H8UH7L3uiJ5ybf6lc",
+        authDomain: "lilia-catalogo.firebaseapp.com",
+        projectId: "lilia-catalogo",
+        storageBucket: "lilia-catalogo.firebasestorage.app",
+        messagingSenderId: "846476027363",
+        appId: "1:846476027363:web:f85192e2c3022f5bcf6cd6"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+    const CORREOS_PERMITIDOS = ["brunoromero637@gmail.com"];
+    
+    // Variables globales
+    let productos = [];
+    let videos = [];
+    let cupones = [];
+    let carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
     let cuponAplicado = null;
-    let marcaActual = "all", categoriaActual = "all", generoActual = "all", ordenActual = "nombre", busquedaActual = "";
     let cuponesUsados = JSON.parse(localStorage.getItem("lilia_cupones_usados") || "[]");
-
+    let catalogoNaturaUrl = localStorage.getItem("lilia_catalogo_natura") || "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
+    let catalogoAvonUrl = localStorage.getItem("lilia_catalogo_avon") || "https://www.avon.com.ar/catalogo";
+    let editandoId = null;
+    let marcaActual = "all", categoriaActual = "all", generoActual = "all", ordenActual = "nombre", busquedaActual = "";
+    
+    // Funciones de Firestore
+    async function cargarProductos() {
+        const querySnapshot = await getDocs(collection(db, "productos"));
+        productos = querySnapshot.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
+        renderizarPublico();
+        renderizarAdmin();
+    }
+    
+    async function guardarProducto(producto) {
+        if (producto.firestoreId) {
+            const docRef = doc(db, "productos", producto.firestoreId);
+            const { firestoreId, ...data } = producto;
+            await updateDoc(docRef, data);
+        } else {
+            const { firestoreId, ...data } = producto;
+            await addDoc(collection(db, "productos"), data);
+        }
+        await cargarProductos();
+    }
+    
+    async function eliminarProducto(id) {
+        await deleteDoc(doc(db, "productos", id));
+        await cargarProductos();
+    }
+    
+    async function cargarVideos() {
+        const querySnapshot = await getDocs(collection(db, "videos"));
+        videos = querySnapshot.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
+        renderizarPublico();
+        renderizarAdmin();
+    }
+    
+    async function guardarVideo(video) {
+        await addDoc(collection(db, "videos"), video);
+        await cargarVideos();
+    }
+    
+    async function eliminarVideo(index) {
+        const video = videos[index];
+        if (video && video.firestoreId) {
+            await deleteDoc(doc(db, "videos", video.firestoreId));
+            await cargarVideos();
+        }
+    }
+    
+    async function cargarCupones() {
+        const querySnapshot = await getDocs(collection(db, "cupones"));
+        cupones = querySnapshot.docs.map(doc => ({ firestoreId: doc.id, ...doc.data() }));
+        renderizarAdmin();
+    }
+    
+    async function guardarCupon(cupon) {
+        await addDoc(collection(db, "cupones"), cupon);
+        await cargarCupones();
+    }
+    
+    async function eliminarCupon(index) {
+        const cupon = cupones[index];
+        if (cupon && cupon.firestoreId) {
+            await deleteDoc(doc(db, "cupones", cupon.firestoreId));
+            await cargarCupones();
+        }
+    }
+    
+    // Funciones de UI
     function openImageModal(imageUrl) {
         document.getElementById("modalImage").src = imageUrl;
         document.getElementById("imageModal").classList.add("show");
     }
-    function closeImageModal() { document.getElementById("imageModal").classList.remove("show"); }
-
+    
+    function closeImageModal() {
+        document.getElementById("imageModal").classList.remove("show");
+    }
+    
     function initDarkMode() {
         const darkMode = localStorage.getItem("darkMode") === "true";
         if (darkMode) document.body.classList.add("dark");
         const btn = document.getElementById("darkModeToggle");
         btn.textContent = darkMode ? "☀️" : "🌙";
-        btn.onclick = () => { document.body.classList.toggle("dark"); localStorage.setItem("darkMode", document.body.classList.contains("dark")); btn.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙"; };
+        btn.onclick = () => {
+            document.body.classList.toggle("dark");
+            const isDark = document.body.classList.contains("dark");
+            localStorage.setItem("darkMode", isDark);
+            btn.textContent = isDark ? "☀️" : "🌙";
+        };
     }
-
+    
     function convertirUrlVideo(url) {
-        if (url.includes("dailymotion.com")) { let m = url.match(/video\/([a-zA-Z0-9]+)/); if (m) return `https://www.dailymotion.com/embed/video/${m[1]}`; }
+        if (url.includes("dailymotion.com")) {
+            let m = url.match(/video\/([a-zA-Z0-9]+)/);
+            if (m) return `https://www.dailymotion.com/embed/video/${m[1]}`;
+        }
         if (url.includes("youtube.com/watch")) return url.replace("watch?v=", "embed/");
         if (url.includes("youtu.be/")) return `https://www.youtube.com/embed/${url.split("youtu.be/")[1]}`;
         return url;
     }
-
-    function cargarDatos() {
-        productos = JSON.parse(localStorage.getItem("lilia_productos") || "[]");
-        videos = JSON.parse(localStorage.getItem("lilia_videos") || "[]");
-        cupones = JSON.parse(localStorage.getItem("lilia_cupones") || "[]");
-        const savedNatura = localStorage.getItem("lilia_catalogo_natura");
-        const savedAvon = localStorage.getItem("lilia_catalogo_avon");
-        if (savedNatura) catalogoNaturaUrl = savedNatura;
-        if (savedAvon) catalogoAvonUrl = savedAvon;
-        carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
-        document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
-        document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
-        actualizarCarritoUI();
-    }
-
-    function guardarTodo() {
-        localStorage.setItem("lilia_productos", JSON.stringify(productos));
-        localStorage.setItem("lilia_videos", JSON.stringify(videos));
-        localStorage.setItem("lilia_cupones", JSON.stringify(cupones));
-        localStorage.setItem("lilia_catalogo_natura", catalogoNaturaUrl);
-        localStorage.setItem("lilia_catalogo_avon", catalogoAvonUrl);
-        localStorage.setItem("lilia_carrito", JSON.stringify(carrito));
-        localStorage.setItem("lilia_cupones_usados", JSON.stringify(cuponesUsados));
-    }
-
+    
     function guardarLinksManual() {
         const linkNatura = document.getElementById("linkNaturaInput").value.trim();
         const linkAvon = document.getElementById("linkAvonInput").value.trim();
-        if (linkNatura) { catalogoNaturaUrl = linkNatura; localStorage.setItem("lilia_catalogo_natura", linkNatura); }
-        if (linkAvon) { catalogoAvonUrl = linkAvon; localStorage.setItem("lilia_catalogo_avon", linkAvon); }
+        if (linkNatura) {
+            catalogoNaturaUrl = linkNatura;
+            localStorage.setItem("lilia_catalogo_natura", linkNatura);
+        }
+        if (linkAvon) {
+            catalogoAvonUrl = linkAvon;
+            localStorage.setItem("lilia_catalogo_avon", linkAvon);
+        }
         document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
         document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
         alert("Links actualizados correctamente!");
     }
-
+    
     function calcularTotalConDescuento() {
         let subtotal = carrito.reduce((s, i) => s + (parseInt(i.precio.replace(/[^0-9]/g,'')) || 0) * i.cantidad, 0);
         if (!cuponAplicado) return subtotal;
-        let descuento = 0;
-        if (cuponAplicado.tipo === "porcentaje") descuento = subtotal * cuponAplicado.valor / 100;
-        else descuento = cuponAplicado.valor;
+        let descuento = cuponAplicado.tipo === "porcentaje" ? subtotal * cuponAplicado.valor / 100 : cuponAplicado.valor;
         return Math.max(0, subtotal - descuento);
     }
-
+    
     function aplicarCupon() {
         const codigo = document.getElementById("cuponCode").value.trim().toUpperCase();
         const cupon = cupones.find(c => c.codigo === codigo);
@@ -402,49 +566,53 @@
         document.getElementById("cuponInfo").innerHTML = `Cupon aplicado: ${cupon.codigo} - ${cupon.tipo === "porcentaje" ? cupon.valor + "%" : "$" + cupon.valor} de descuento`;
         actualizarCarritoUI();
     }
-
+    
     function agregarAlCarrito(id) {
-        let p = productos.find(p => p.id === id);
+        let p = productos.find(p => p.firestoreId === id);
         if (!p || p.stock <= 0) return;
         let item = carrito.find(i => i.id === id);
         if (item) item.cantidad++;
         else carrito.push({ id: id, nombre: p.nombre, precio: p.precio, cantidad: 1 });
-        guardarTodo();
+        guardarCarrito();
         actualizarCarritoUI();
     }
-
+    
     function comprarAhora(id) {
-        let p = productos.find(p => p.id === id);
+        let p = productos.find(p => p.firestoreId === id);
         if (!p || p.stock <= 0) { alert("Producto sin stock"); return; }
         p.stock--;
-        guardarTodo();
-        renderizarPublico();
-        renderizarAdmin();
+        guardarProducto(p);
         let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
         mensaje += `- ${p.nombre}\n   ${p.precio} x 1 = ${p.precio}\n\n`;
         mensaje += `TOTAL: ${p.precio}\n\nHola! Quiero comprar este producto. Me confirmas disponibilidad?`;
         window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
         alert("Pedido enviado! Stock actualizado.");
     }
-
-    function eliminarDelCarrito(id) { carrito = carrito.filter(i => i.id !== id); cuponAplicado = null; document.getElementById("cuponInfo").innerHTML = ""; guardarTodo(); actualizarCarritoUI(); }
-    function actualizarCantidad(id, nueva) { let item = carrito.find(i => i.id === id); if (item) { if (nueva <= 0) eliminarDelCarrito(id); else { item.cantidad = nueva; guardarTodo(); actualizarCarritoUI(); } } }
-
+    
+    function eliminarDelCarrito(id) { carrito = carrito.filter(i => i.id !== id); cuponAplicado = null; document.getElementById("cuponInfo").innerHTML = ""; guardarCarrito(); actualizarCarritoUI(); }
+    function actualizarCantidad(id, nueva) { let item = carrito.find(i => i.id === id); if (item) { if (nueva <= 0) eliminarDelCarrito(id); else { item.cantidad = nueva; guardarCarrito(); actualizarCarritoUI(); } } }
+    function guardarCarrito() { localStorage.setItem("lilia_carrito", JSON.stringify(carrito)); }
+    
     function actualizarCarritoUI() {
         let count = carrito.reduce((s, i) => s + i.cantidad, 0);
         document.getElementById("cartCount").textContent = count;
         if (carrito.length === 0) document.getElementById("cartItems").innerHTML = "<p style='text-align:center;'>Carrito vacio</p>";
         else {
-            document.getElementById("cartItems").innerHTML = carrito.map(item => `<div class="cart-item"><div><strong>${item.nombre}</strong><br>${item.precio}</div><div><button onclick="actualizarCantidad(${item.id}, ${item.cantidad-1})">-</button><span style="margin:0 10px;">${item.cantidad}</span><button onclick="actualizarCantidad(${item.id}, ${item.cantidad+1})">+</button><button onclick="eliminarDelCarrito(${item.id})" style="padding:5px 10px; background:#e74c3c; color:white; border:none; border-radius:10px;">X</button></div></div>`).join('');
+            document.getElementById("cartItems").innerHTML = carrito.map(item => `<div class="cart-item"><div><strong>${item.nombre}</strong><br>${item.precio}</div><div><button onclick="actualizarCantidad('${item.id}', ${item.cantidad-1})">-</button><span style="margin:0 10px;">${item.cantidad}</span><button onclick="actualizarCantidad('${item.id}', ${item.cantidad+1})">+</button><button onclick="eliminarDelCarrito('${item.id}')" style="padding:5px 10px; background:#e74c3c; color:white; border:none; border-radius:10px;">X</button></div></div>`).join('');
         }
         let total = calcularTotalConDescuento();
         document.getElementById("cartTotal").innerHTML = `Total: $${total.toLocaleString()}`;
     }
-
-    function enviarWhatsApp() {
+    
+    async function enviarWhatsApp() {
         if (carrito.length === 0) { alert("El carrito esta vacio"); return; }
-        carrito.forEach(item => { let p = productos.find(p => p.id === item.id); if (p && p.stock >= item.cantidad) p.stock -= item.cantidad; });
-        guardarTodo(); renderizarPublico(); renderizarAdmin();
+        for (let item of carrito) {
+            let p = productos.find(p => p.firestoreId === item.id);
+            if (p && p.stock >= item.cantidad) {
+                p.stock -= item.cantidad;
+                await guardarProducto(p);
+            }
+        }
         let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
         carrito.forEach(item => { let precioNum = parseInt(item.precio.replace(/[^0-9]/g,'')) || 0; mensaje += `- ${item.nombre}\n   ${item.precio} x ${item.cantidad} = $${(precioNum * item.cantidad).toLocaleString()}\n\n`; });
         let subtotal = carrito.reduce((s, i) => s + (parseInt(i.precio.replace(/[^0-9]/g,'')) || 0) * i.cantidad, 0);
@@ -453,33 +621,47 @@
             mensaje += `Subtotal: $${subtotal.toLocaleString()}\n`;
             mensaje += `Cupon ${cuponAplicado.codigo}: -$${Math.round(descuento).toLocaleString()}\n`;
             if (cuponAplicado.unico === "si") cuponesUsados.push(cuponAplicado.codigo);
+            localStorage.setItem("lilia_cupones_usados", JSON.stringify(cuponesUsados));
         }
         let total = calcularTotalConDescuento();
         mensaje += `TOTAL: $${total.toLocaleString()}\n\nHola! Quiero hacer este pedido. Me confirmas disponibilidad?`;
         carrito = []; cuponAplicado = null; document.getElementById("cuponInfo").innerHTML = ""; document.getElementById("cuponCode").value = "";
-        actualizarCarritoUI(); guardarTodo();
+        guardarCarrito();
+        actualizarCarritoUI();
+        await cargarProductos();
         window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
         alert("Pedido enviado! El stock se ha actualizado.");
     }
-
+    
     function actualizarSubcategorias() {
         const container = document.getElementById("subcategoriasContainer");
         const categorias = ["Perfumes", "Jabones", "Cremas", "Maquillaje", "Cabello", "Otros"];
-        if (marcaActual === "all") { container.classList.remove("show"); container.innerHTML = ""; return; }
+        if (marcaActual === "all") {
+            container.classList.remove("show");
+            container.innerHTML = "";
+            return;
+        }
         container.classList.add("show");
         container.innerHTML = categorias.map(cat => `<button class="cat-btn subcategoria-filtro ${categoriaActual === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`).join('');
-        document.querySelectorAll(".subcategoria-filtro").forEach(btn => { btn.onclick = () => { document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active")); btn.classList.add("active"); categoriaActual = btn.dataset.cat; renderizarPublico(); }; });
+        document.querySelectorAll(".subcategoria-filtro").forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                categoriaActual = btn.dataset.cat;
+                renderizarPublico();
+            };
+        });
     }
-
+    
     function renderizarAdmin() {
         let activos = productos.filter(p => p.stock > 0);
         let agotados = productos.filter(p => p.stock === 0);
-        document.getElementById("listaActivos").innerHTML = activos.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | Stock: ${p.stock} | ${p.marca} - ${p.categoria}</div><div class="producto-actions"><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button><button class="btn btn-info" onclick="duplicarProducto(${p.id})" style="background:#17a2b8; color:white; border:none;">Duplicar</button><button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos activos</p>";
-        document.getElementById("listaAgotados").innerHTML = agotados.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | AGOTADO | ${p.marca} - ${p.categoria}</div><div class="producto-actions"><button class="btn btn-warning" onclick="editarProducto(${p.id})">Editar</button><button class="btn btn-info" onclick="duplicarProducto(${p.id})" style="background:#17a2b8; color:white; border:none;">Duplicar</button><button class="btn btn-danger" onclick="eliminarProducto(${p.id})">Eliminar</button></div></div>`).join('') || "<p>No hay productos agotados</p>";
+        document.getElementById("listaActivos").innerHTML = activos.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | Stock: ${p.stock} | ${p.marca} - ${p.categoria}</div><div class="producto-actions"><button class="btn btn-warning" onclick="editarProducto('${p.firestoreId}')">Editar</button><button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')" style="background:#17a2b8; color:white; border:none;">Duplicar</button><button class="btn btn-danger" onclick="eliminarProducto('${p.firestoreId}')">Eliminar</button></div></div>`).join('') || "<p>No hay productos activos</p>";
+        document.getElementById("listaAgotados").innerHTML = agotados.map(p => `<div class="producto-item"><div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>Precio: ${p.precio} | AGOTADO | ${p.marca} - ${p.categoria}</div><div class="producto-actions"><button class="btn btn-warning" onclick="editarProducto('${p.firestoreId}')">Editar</button><button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')" style="background:#17a2b8; color:white; border:none;">Duplicar</button><button class="btn btn-danger" onclick="eliminarProducto('${p.firestoreId}')">Eliminar</button></div></div>`).join('') || "<p>No hay productos agotados</p>";
         document.getElementById("listaVideosAdmin").innerHTML = videos.map((v,i) => `<div class="producto-item"><div><strong>${v.titulo}</strong><br>${v.url.substring(0,50)}</div><button class="btn btn-danger" onclick="eliminarVideo(${i})">Eliminar</button></div>`).join('') || "<p>No hay videos</p>";
         document.getElementById("listaCupones").innerHTML = cupones.map((c,i) => `<div class="producto-item"><div><strong>${c.codigo}</strong><br>${c.tipo === "porcentaje" ? c.valor + "%" : "$" + c.valor} | ${c.unico === "si" ? "Uso unico" : "Multiples usos"}</div><button class="btn btn-danger" onclick="eliminarCupon(${i})">Eliminar</button></div>`).join('') || "<p>No hay cupones</p>";
     }
-
+    
     function renderizarPublico() {
         let filtrados = productos.filter(p => p.stock > 0);
         if (marcaActual !== "all") filtrados = filtrados.filter(p => p.marca === marcaActual);
@@ -511,8 +693,8 @@
                     <div class="producto-precio">${p.precio}</div>
                     <div class="producto-stock">Stock: ${p.stock} unidad${p.stock!==1?'es':''}</div>
                     <div class="botones-container">
-                        <button class="btn-carrito" onclick="agregarAlCarrito(${p.id})">🛒 Agregar</button>
-                        <button class="btn-comprar-ahora" onclick="comprarAhora(${p.id})">⚡ Comprar ahora</button>
+                        <button class="btn-carrito" onclick="agregarAlCarrito('${p.firestoreId}')">🛒 Agregar</button>
+                        <button class="btn-comprar-ahora" onclick="comprarAhora('${p.firestoreId}')">⚡ Comprar ahora</button>
                     </div>
                 </div>
             </div>`;
@@ -520,8 +702,8 @@
         if (filtrados.length === 0) document.getElementById("catalogoPublico").innerHTML = "<p style='text-align:center;padding:50px;'>No hay productos disponibles</p>";
         document.getElementById("videosPublicos").innerHTML = videos.map(v => `<div class="video-card"><div class="video-container"><iframe src="${convertirUrlVideo(v.url)}" frameborder="0" allowfullscreen></iframe></div><h4>${v.titulo}</h4></div>`).join('') || "<p style='text-align:center;'>No hay videos cargados</p>";
     }
-
-    function guardarProducto() {
+    
+    async function guardarProductoFormulario() {
         let nombre = document.getElementById("prodNombre").value.trim();
         let marca = document.getElementById("prodMarca").value;
         let genero = document.getElementById("prodGenero").value;
@@ -533,67 +715,205 @@
         let imagen = document.getElementById("prodImagen").value.trim();
         let archivo = document.getElementById("prodImagenFile").files[0];
         if (!nombre || !precio) { alert("Completá nombre y precio"); return; }
-        let guardar = (imgFinal) => {
-            if (editandoId !== null) { let idx = productos.findIndex(p => p.id === editandoId); if (idx !== -1) productos[idx] = { ...productos[idx], nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imgFinal }; editandoId = null; }
-            else { productos.push({ id: Date.now(), nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imgFinal || "https://placehold.co/400x300?text=Producto" }); }
-            guardarTodo(); limpiarForm(); renderizarAdmin(); renderizarPublico(); document.getElementById("btnCancelar").style.display = "none"; alert("Producto guardado");
-        };
-        if (archivo) { let r = new FileReader(); r.onload = e => guardar(e.target.result); r.readAsDataURL(archivo); }
-        else guardar(imagen);
+        
+        if (archivo) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const producto = { nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: e.target.result };
+                if (editandoId) producto.firestoreId = editandoId;
+                await guardarProducto(producto);
+                limpiarForm();
+                document.getElementById("btnCancelar").style.display = "none";
+                alert("Producto guardado");
+            };
+            reader.readAsDataURL(archivo);
+        } else {
+            const producto = { nombre, marca, genero, categoria, precio, precioRef, stock, destacado, imagen: imagen || "https://placehold.co/400x300?text=Producto" };
+            if (editandoId) producto.firestoreId = editandoId;
+            await guardarProducto(producto);
+            limpiarForm();
+            document.getElementById("btnCancelar").style.display = "none";
+            alert("Producto guardado");
+        }
     }
-
-    function duplicarProducto(id) {
-        let original = productos.find(p => p.id === id);
+    
+    function editarProducto(id) {
+        let p = productos.find(p => p.firestoreId === id);
+        if (!p) return;
+        editandoId = id;
+        document.getElementById("prodNombre").value = p.nombre;
+        document.getElementById("prodMarca").value = p.marca;
+        document.getElementById("prodGenero").value = p.genero || "Mujer";
+        document.getElementById("prodCategoria").value = p.categoria;
+        document.getElementById("prodPrecio").value = p.precio;
+        document.getElementById("prodPrecioRef").value = p.precioRef || "";
+        document.getElementById("prodStock").value = p.stock;
+        document.getElementById("prodDestacado").checked = p.destacado || false;
+        document.getElementById("prodImagen").value = p.imagen || "";
+        document.getElementById("btnCancelar").style.display = "inline-block";
+        document.getElementById("btnGuardar").textContent = "Actualizar";
+    }
+    
+    async function duplicarProducto(id) {
+        let original = productos.find(p => p.firestoreId === id);
         if (!original) return;
-        let nuevo = { ...original, id: Date.now(), nombre: original.nombre + " (Copia)", stock: original.stock };
-        productos.push(nuevo);
-        guardarTodo();
-        renderizarAdmin();
-        renderizarPublico();
+        let nuevo = { ...original, nombre: original.nombre + " (Copia)", stock: original.stock };
+        delete nuevo.firestoreId;
+        await guardarProducto(nuevo);
         alert("Producto duplicado correctamente");
     }
-
-    function editarProducto(id) { let p = productos.find(p => p.id === id); if(!p) return; editandoId = id; document.getElementById("prodNombre").value = p.nombre; document.getElementById("prodMarca").value = p.marca; document.getElementById("prodGenero").value = p.genero || "Mujer"; document.getElementById("prodCategoria").value = p.categoria; document.getElementById("prodPrecio").value = p.precio; document.getElementById("prodPrecioRef").value = p.precioRef || ""; document.getElementById("prodStock").value = p.stock; document.getElementById("prodDestacado").checked = p.destacado || false; document.getElementById("prodImagen").value = p.imagen || ""; document.getElementById("btnCancelar").style.display = "inline-block"; document.getElementById("btnGuardar").textContent = "Actualizar"; }
-    function eliminarProducto(id) { if(confirm("Eliminar?")) { productos = productos.filter(p => p.id !== id); guardarTodo(); renderizarAdmin(); renderizarPublico(); } }
-    function limpiarForm() { document.getElementById("prodNombre").value = ""; document.getElementById("prodMarca").value = "Natura"; document.getElementById("prodGenero").value = "Mujer"; document.getElementById("prodCategoria").value = "Perfumes"; document.getElementById("prodPrecio").value = ""; document.getElementById("prodPrecioRef").value = ""; document.getElementById("prodStock").value = ""; document.getElementById("prodDestacado").checked = false; document.getElementById("prodImagen").value = ""; document.getElementById("prodImagenFile").value = ""; editandoId = null; document.getElementById("btnGuardar").textContent = "Guardar"; document.getElementById("btnCancelar").style.display = "none"; }
-    function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if(!t || !u) { alert("Completá título y URL"); return; } videos.push({titulo:t, url:u}); guardarTodo(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; renderizarAdmin(); renderizarPublico(); alert("Video agregado"); }
-    function eliminarVideo(i) { if(confirm("Eliminar video?")) { videos.splice(i,1); guardarTodo(); renderizarAdmin(); renderizarPublico(); } }
-    function agregarCupon() { let codigo = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let tipo = document.getElementById("cuponTipo").value; let valor = parseInt(document.getElementById("cuponValor").value); let unico = document.getElementById("cuponUnico").value; if (!codigo || !valor) { alert("Completá código y valor"); return; } cupones.push({ codigo, tipo, valor, unico }); guardarTodo(); renderizarAdmin(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupon agregado"); }
-    function eliminarCupon(i) { if(confirm("Eliminar cupon?")) { cupones.splice(i,1); guardarTodo(); renderizarAdmin(); } }
-    function exportarDatos() { let d = { productos, videos, cupones, catalogoNaturaUrl, catalogoAvonUrl }; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)])); a.download = "lilia_backup.json"; a.click(); }
-    function importarDatos(file) { let r = new FileReader(); r.onload = e => { let d = JSON.parse(e.target.result); if(d.productos) productos = d.productos; if(d.videos) videos = d.videos; if(d.cupones) cupones = d.cupones; if(d.catalogoNaturaUrl) catalogoNaturaUrl = d.catalogoNaturaUrl; if(d.catalogoAvonUrl) catalogoAvonUrl = d.catalogoAvonUrl; guardarTodo(); renderizarAdmin(); renderizarPublico(); alert("Importado"); }; r.readAsText(file); }
-
-    document.addEventListener("DOMContentLoaded", () => {
-        initDarkMode(); cargarDatos(); renderizarAdmin(); renderizarPublico();
+    
+    function limpiarForm() {
+        document.getElementById("prodNombre").value = "";
+        document.getElementById("prodMarca").value = "Natura";
+        document.getElementById("prodGenero").value = "Mujer";
+        document.getElementById("prodCategoria").value = "Perfumes";
+        document.getElementById("prodPrecio").value = "";
+        document.getElementById("prodPrecioRef").value = "";
+        document.getElementById("prodStock").value = "";
+        document.getElementById("prodDestacado").checked = false;
+        document.getElementById("prodImagen").value = "";
+        document.getElementById("prodImagenFile").value = "";
+        editandoId = null;
+        document.getElementById("btnGuardar").textContent = "Guardar";
+        document.getElementById("btnCancelar").style.display = "none";
+    }
+    
+    async function agregarVideo() {
+        let titulo = document.getElementById("videoTitulo").value.trim();
+        let url = document.getElementById("videoUrl").value.trim();
+        if (!titulo || !url) { alert("Completá título y URL"); return; }
+        await guardarVideo({ titulo, url });
+        document.getElementById("videoTitulo").value = "";
+        document.getElementById("videoUrl").value = "";
+        alert("Video agregado");
+    }
+    
+    async function agregarCupon() {
+        let codigo = document.getElementById("cuponCodigo").value.trim().toUpperCase();
+        let tipo = document.getElementById("cuponTipo").value;
+        let valor = parseInt(document.getElementById("cuponValor").value);
+        let unico = document.getElementById("cuponUnico").value;
+        if (!codigo || !valor) { alert("Completá código y valor"); return; }
+        await guardarCupon({ codigo, tipo, valor, unico });
+        document.getElementById("cuponCodigo").value = "";
+        document.getElementById("cuponValor").value = "";
+        alert("Cupon agregado");
+    }
+    
+    // Inicialización
+    document.getElementById("catalogoNaturaLink").href = catalogoNaturaUrl;
+    document.getElementById("catalogoAvonLink").href = catalogoAvonUrl;
+    
+    // Exponer funciones globalmente
+    window.openImageModal = openImageModal;
+    window.closeImageModal = closeImageModal;
+    window.agregarAlCarrito = agregarAlCarrito;
+    window.comprarAhora = comprarAhora;
+    window.eliminarDelCarrito = eliminarDelCarrito;
+    window.actualizarCantidad = actualizarCantidad;
+    window.editarProducto = editarProducto;
+    window.eliminarProducto = eliminarProducto;
+    window.duplicarProducto = duplicarProducto;
+    window.eliminarVideo = eliminarVideo;
+    window.eliminarCupon = eliminarCupon;
+    window.guardarLinksManual = guardarLinksManual;
+    
+    // Login Google
+    window.loginWithGoogle = async function() {
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+            if (CORREOS_PERMITIDOS.includes(user.email)) {
+                localStorage.setItem("admin_logged", "true");
+                localStorage.setItem("admin_email", user.email);
+                location.reload();
+            } else {
+                alert("Acceso denegado. Este correo no está autorizado.");
+                await signOut(auth);
+            }
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
+    };
+    
+    window.logoutUser = async function() {
+        await signOut(auth);
+        localStorage.removeItem("admin_logged");
+        localStorage.removeItem("admin_email");
+        location.reload();
+    };
+    
+    onAuthStateChanged(auth, (user) => {
+        const adminPanel = document.getElementById("adminPanel");
+        const btnLogin = document.getElementById("googleLoginBtn");
+        const btnLogout = document.getElementById("btnLogout");
+        if (user && CORREOS_PERMITIDOS.includes(user.email)) {
+            adminPanel.classList.add("show");
+            btnLogin.style.display = "none";
+            btnLogout.style.display = "inline-block";
+            document.getElementById("userEmailDisplay").innerHTML = user.email;
+            document.getElementById("linkNaturaInput").value = catalogoNaturaUrl;
+            document.getElementById("linkAvonInput").value = catalogoAvonUrl;
+        } else {
+            adminPanel.classList.remove("show");
+            btnLogin.style.display = "block";
+            btnLogout.style.display = "none";
+        }
+    });
+    
+    document.addEventListener("DOMContentLoaded", async () => {
+        initDarkMode();
+        await cargarProductos();
+        await cargarVideos();
+        await cargarCupones();
+        
         const tabs = document.querySelectorAll(".tab-btn");
-        tabs.forEach(tab => { tab.addEventListener("click", function() { tabs.forEach(t => t.classList.remove("active")); this.classList.add("active"); document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active")); document.getElementById(this.dataset.tab).classList.add("active"); }); });
-        document.querySelectorAll("[data-marca]").forEach(btn => { btn.addEventListener("click", () => { document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active")); btn.classList.add("active"); marcaActual = btn.dataset.marca; categoriaActual = "all"; generoActual = "all"; document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active")); document.querySelector('[data-genero="all"]').classList.add("active"); actualizarSubcategorias(); renderizarPublico(); }); });
-        document.querySelectorAll("[data-genero]").forEach(btn => { btn.addEventListener("click", () => { document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active")); btn.classList.add("active"); generoActual = btn.dataset.genero; renderizarPublico(); }); });
+        tabs.forEach(tab => {
+            tab.addEventListener("click", function() {
+                tabs.forEach(t => t.classList.remove("active"));
+                this.classList.add("active");
+                document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+                document.getElementById(this.dataset.tab).classList.add("active");
+            });
+        });
+        
+        document.querySelectorAll("[data-marca]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                marcaActual = btn.dataset.marca;
+                categoriaActual = "all";
+                generoActual = "all";
+                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+                document.querySelector('[data-genero="all"]').classList.add("active");
+                actualizarSubcategorias();
+                renderizarPublico();
+            });
+        });
+        
+        document.querySelectorAll("[data-genero]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll("[data-genero]").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                generoActual = btn.dataset.genero;
+                renderizarPublico();
+            });
+        });
+        
         document.getElementById("ordenSelect").onchange = (e) => { ordenActual = e.target.value; renderizarPublico(); };
         document.getElementById("searchInput").oninput = (e) => { busquedaActual = e.target.value; renderizarPublico(); };
         document.getElementById("cartBtn").onclick = () => document.getElementById("cartSidebar").classList.add("open");
         document.getElementById("closeCart").onclick = () => document.getElementById("cartSidebar").classList.remove("open");
         document.getElementById("whatsappBtn").onclick = enviarWhatsApp;
         document.getElementById("aplicarCuponBtn").onclick = aplicarCupon;
-        document.getElementById("btnGuardar").onclick = guardarProducto;
+        document.getElementById("btnGuardar").onclick = guardarProductoFormulario;
         document.getElementById("btnCancelar").onclick = limpiarForm;
         document.getElementById("btnAddVideo").onclick = agregarVideo;
         document.getElementById("btnAgregarCupon").onclick = agregarCupon;
-        document.getElementById("btnExportar").onclick = exportarDatos;
-        document.getElementById("btnImportar").onclick = () => document.getElementById("importFile").click();
-        document.getElementById("importFile").onchange = e => { if(e.target.files[0]) importarDatos(e.target.files[0]); e.target.value=""; };
-        window.agregarAlCarrito = agregarAlCarrito;
-        window.comprarAhora = comprarAhora;
-        window.eliminarDelCarrito = eliminarDelCarrito;
-        window.actualizarCantidad = actualizarCantidad;
-        window.editarProducto = editarProducto;
-        window.eliminarProducto = eliminarProducto;
-        window.duplicarProducto = duplicarProducto;
-        window.eliminarCupon = eliminarCupon;
-        window.openImageModal = openImageModal;
-        window.closeImageModal = closeImageModal;
-        window.guardarLinksManual = guardarLinksManual;
+        
         actualizarSubcategorias();
+        actualizarCarritoUI();
     });
 </script>
 </body>
