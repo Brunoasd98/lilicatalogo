@@ -63,10 +63,8 @@
                     // Cargar los valores actuales en los inputs
                     const naturaLink = localStorage.getItem("lilia_catalogo_natura");
                     const avonLink = localStorage.getItem("lilia_catalogo_avon");
-                    const linkNaturaInput = document.getElementById("linkNaturaInput");
-                    const linkAvonInput = document.getElementById("linkAvonInput");
-                    if (linkNaturaInput && naturaLink) linkNaturaInput.value = naturaLink;
-                    if (linkAvonInput && avonLink) linkAvonInput.value = avonLink;
+                    if (naturaLink) document.getElementById("linkNaturaInput").value = naturaLink;
+                    if (avonLink) document.getElementById("linkAvonInput").value = avonLink;
                 } else {
                     if (adminPanel) adminPanel.classList.remove("show");
                     if (btnLogin) btnLogin.style.display = "block";
@@ -259,8 +257,11 @@
 
         <div id="catalogos" class="tab-content">
             <h3>Configurar Links de Catalogos</h3>
-            <div class="form-grid"><div class="form-group"><label>Link Catalogo Natura</label><input type="text" id="linkNaturaInput" placeholder="https://..."></div><div class="form-group"><label>Link Catalogo Avon</label><input type="text" id="linkAvonInput" placeholder="https://..."></div></div>
-            <button class="btn btn-primary" id="guardarLinksBtn">Guardar Links</button>
+            <div class="form-grid">
+                <div class="form-group"><label>Link Catalogo Natura</label><input type="text" id="linkNaturaInput" placeholder="https://..."></div>
+                <div class="form-group"><label>Link Catalogo Avon</label><input type="text" id="linkAvonInput" placeholder="https://..."></div>
+            </div>
+            <button class="btn btn-primary" id="guardarLinksBtn" onclick="guardarLinksManual()">Guardar Links</button>
         </div>
     </div>
 
@@ -322,6 +323,35 @@
     let ordenActual = "nombre";
     let busquedaActual = "";
 
+    // ========== FUNCIÓN PARA GUARDAR LINKS (SIMPLE Y DIRECTA) ==========
+    window.guardarLinksManual = function() {
+        console.log("Función guardarLinksManual ejecutada");
+        
+        const linkNatura = document.getElementById("linkNaturaInput").value.trim();
+        const linkAvon = document.getElementById("linkAvonInput").value.trim();
+        
+        if (linkNatura) {
+            catalogoNaturaUrl = linkNatura;
+            localStorage.setItem("lilia_catalogo_natura", linkNatura);
+            console.log("Link Natura guardado:", linkNatura);
+        }
+        
+        if (linkAvon) {
+            catalogoAvonUrl = linkAvon;
+            localStorage.setItem("lilia_catalogo_avon", linkAvon);
+            console.log("Link Avon guardado:", linkAvon);
+        }
+        
+        // Actualizar los enlaces visibles
+        const naturaLinkElement = document.getElementById("catalogoNaturaLink");
+        const avonLinkElement = document.getElementById("catalogoAvonLink");
+        
+        if (naturaLinkElement) naturaLinkElement.href = catalogoNaturaUrl;
+        if (avonLinkElement) avonLinkElement.href = catalogoAvonUrl;
+        
+        alert("Links actualizados correctamente!");
+    }
+
     // ========== FUNCIONES ==========
     function openImageModal(imageUrl) {
         const modal = document.getElementById("imageModal");
@@ -354,7 +384,6 @@
         productos = JSON.parse(localStorage.getItem("lilia_productos") || "[]");
         videos = JSON.parse(localStorage.getItem("lilia_videos") || "[]");
         
-        // Cargar URLs de los catálogos desde localStorage
         const savedNaturaUrl = localStorage.getItem("lilia_catalogo_natura");
         const savedAvonUrl = localStorage.getItem("lilia_catalogo_avon");
         
@@ -367,8 +396,11 @@
         
         carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
         
-        // Actualizar los links en la interfaz
-        actualizarLinksCatalogo();
+        const naturaLinkElement = document.getElementById("catalogoNaturaLink");
+        const avonLinkElement = document.getElementById("catalogoAvonLink");
+        if (naturaLinkElement) naturaLinkElement.href = catalogoNaturaUrl;
+        if (avonLinkElement) avonLinkElement.href = catalogoAvonUrl;
+        
         actualizarCarritoUI();
     }
 
@@ -378,13 +410,6 @@
         localStorage.setItem("lilia_catalogo_natura", catalogoNaturaUrl);
         localStorage.setItem("lilia_catalogo_avon", catalogoAvonUrl);
         localStorage.setItem("lilia_carrito", JSON.stringify(carrito));
-    }
-
-    function actualizarLinksCatalogo() {
-        const naturaLink = document.getElementById("catalogoNaturaLink");
-        const avonLink = document.getElementById("catalogoAvonLink");
-        if (naturaLink) naturaLink.href = catalogoNaturaUrl;
-        if (avonLink) avonLink.href = catalogoAvonUrl;
     }
 
     function agregarAlCarrito(id) {
@@ -547,7 +572,7 @@
     function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if(!t || !u) { alert("Completá título y URL"); return; } videos.push({titulo:t, url:u}); guardarTodo(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; renderizarAdmin(); renderizarPublico(); alert("Video agregado"); }
     function eliminarVideo(i) { if(confirm("Eliminar video?")) { videos.splice(i,1); guardarTodo(); renderizarAdmin(); renderizarPublico(); } }
     function exportarDatos() { let d = { productos, videos, catalogoNaturaUrl, catalogoAvonUrl }; let a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(d,null,2)])); a.download = "lilia_backup.json"; a.click(); }
-    function importarDatos(file) { let r = new FileReader(); r.onload = e => { let d = JSON.parse(e.target.result); if(d.productos) productos = d.productos; if(d.videos) videos = d.videos; if(d.catalogoNaturaUrl) catalogoNaturaUrl = d.catalogoNaturaUrl; if(d.catalogoAvonUrl) catalogoAvonUrl = d.catalogoAvonUrl; guardarTodo(); actualizarLinksCatalogo(); renderizarAdmin(); renderizarPublico(); alert("Importado"); }; r.readAsText(file); }
+    function importarDatos(file) { let r = new FileReader(); r.onload = e => { let d = JSON.parse(e.target.result); if(d.productos) productos = d.productos; if(d.videos) videos = d.videos; if(d.catalogoNaturaUrl) catalogoNaturaUrl = d.catalogoNaturaUrl; if(d.catalogoAvonUrl) catalogoAvonUrl = d.catalogoAvonUrl; guardarTodo(); renderizarAdmin(); renderizarPublico(); alert("Importado"); }; r.readAsText(file); }
 
     // ========== EVENTOS ==========
     document.addEventListener("DOMContentLoaded", () => {
@@ -601,30 +626,6 @@
         document.getElementById("btnExportar").onclick = exportarDatos;
         document.getElementById("btnImportar").onclick = () => document.getElementById("importFile").click();
         document.getElementById("importFile").onchange = e => { if(e.target.files[0]) importarDatos(e.target.files[0]); e.target.value=""; };
-        
-        // Botón guardar links - VERIFICADO QUE EXISTE
-        const guardarLinksBtn = document.getElementById("guardarLinksBtn");
-        if (guardarLinksBtn) {
-            guardarLinksBtn.addEventListener("click", () => { 
-                const nuevaUrlNatura = document.getElementById("linkNaturaInput").value.trim(); 
-                const nuevaUrlAvon = document.getElementById("linkAvonInput").value.trim(); 
-                if (nuevaUrlNatura) {
-                    catalogoNaturaUrl = nuevaUrlNatura;
-                    localStorage.setItem("lilia_catalogo_natura", catalogoNaturaUrl);
-                }
-                if (nuevaUrlAvon) {
-                    catalogoAvonUrl = nuevaUrlAvon;
-                    localStorage.setItem("lilia_catalogo_avon", catalogoAvonUrl);
-                }
-                actualizarLinksCatalogo();
-                guardarTodo();
-                alert("Links actualizados correctamente");
-                console.log("Natura URL guardada:", catalogoNaturaUrl);
-                console.log("Avon URL guardada:", catalogoAvonUrl);
-            });
-        } else {
-            console.error("No se encontró el botón guardarLinksBtn");
-        }
         
         window.agregarAlCarrito = agregarAlCarrito;
         window.eliminarDelCarrito = eliminarDelCarrito;
