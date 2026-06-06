@@ -102,6 +102,28 @@
         .stock-section { background: var(--card); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
         .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
         
+        /* Estilo para cupón usado */
+        .cupon-usado {
+            opacity: 0.7;
+            background: #e0e0e0 !important;
+            filter: grayscale(0.2);
+        }
+        .cupon-usado .btn-danger {
+            display: none;
+        }
+        .estado-usado {
+            color: #c0392b;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        .estado-disponible {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
         @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .catalogos-container { grid-template-columns: 1fr; } .botones-container { flex-direction: column; } }
     </style>
 </head>
@@ -344,7 +366,7 @@ function comprarAhora(id) {
     if (!p || p.stock <= 0) { alert("Producto sin stock"); return; }
     p.stock--;
     db.collection("productos").doc(p.firestoreId).update({ stock: p.stock });
-    let msg = `🛍️ *PEDIDO LILIA NATURA & AVON* 🛍️%0A%0A- ${p.nombre}%0A   ${p.precio} x 1 = ${p.precio}%0A%0A✅ *TOTAL:* ${p.precio}%0A%0A📲 Hola! Quiero comprar este producto.`;
+    let msg = `PEDIDO LILIA NATURA & AVON%0A%0A- ${p.nombre}%0A   ${p.precio} x 1 = ${p.precio}%0A%0ATOTAL: ${p.precio}%0A%0AHola! Quiero comprar este producto. Me confirmas disponibilidad?`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     alert("Pedido enviado");
 }
@@ -371,22 +393,22 @@ function enviarWhatsApp() {
         }
     });
     
-    // Construir mensaje completo
-    let mensaje = "🛍️ *PEDIDO LILIA NATURA & AVON* 🛍️%0A%0A";
+    // Construir mensaje - SIN CARACTERES RAROS
+    let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
     let subtotal = 0;
     
     carrito.forEach(item => {
         let precioNum = parseInt(item.precio.replace(/[^0-9]/g,'')) || 0;
         subtotal += precioNum * item.cantidad;
-        mensaje += `• *${item.nombre}*%0A   ${item.precio} x ${item.cantidad} = *$${(precioNum * item.cantidad).toLocaleString()}*%0A%0A`;
+        mensaje += `- ${item.nombre}\n   ${item.precio} x ${item.cantidad} = $${(precioNum * item.cantidad).toLocaleString()}\n\n`;
     });
     
     let total = subtotal;
     if (cuponAplicado) {
         let descuento = cuponAplicado.tipo === "porcentaje" ? subtotal * cuponAplicado.valor / 100 : cuponAplicado.valor;
         total = subtotal - descuento;
-        mensaje += `📊 *Subtotal:* $${subtotal.toLocaleString()}%0A`;
-        mensaje += `🏷️ *Cupón ${cuponAplicado.codigo}:* -$${Math.round(descuento).toLocaleString()}%0A%0A`;
+        mensaje += `Subtotal: $${subtotal.toLocaleString()}\n`;
+        mensaje += `Cupón ${cuponAplicado.codigo}: -$${Math.round(descuento).toLocaleString()}\n\n`;
         
         if (cuponAplicado.unico === "si") {
             cuponesUsados.push(cuponAplicado.codigo);
@@ -398,8 +420,8 @@ function enviarWhatsApp() {
         }
     }
     
-    mensaje += `✅ *TOTAL:* $${total.toLocaleString()}%0A%0A`;
-    mensaje += `📲 ¡Hola! Quiero hacer este pedido. ¿Me confirmas disponibilidad?`;
+    mensaje += `TOTAL: $${total.toLocaleString()}\n\n`;
+    mensaje += `Hola! Quiero hacer este pedido. Me confirmas disponibilidad?`;
     
     // Limpiar carrito y cupón
     carrito = [];
@@ -413,8 +435,8 @@ function enviarWhatsApp() {
     setTimeout(() => { cargarProductos(); cargarCupones(); }, 500);
     
     // Abrir WhatsApp
-    window.open(`https://wa.me/?text=${mensaje}`, '_blank');
-    alert("✅ Pedido enviado! El stock se ha actualizado.");
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+    alert("Pedido enviado! El stock se ha actualizado.");
 }
 
 // ========== RENDERIZAR ==========
@@ -468,18 +490,18 @@ function renderizarAdmin() {
         </div>
     `).join('') || "<p>No hay videos</p>";
     
-    // Mostrar cupones con estado
+    // Mostrar cupones con estado mejorado
     document.getElementById("listaCupones").innerHTML = cupones.map(c => {
         const estaUsado = cuponesUsados.includes(c.codigo);
         return `
-            <div class="producto-item" style="${estaUsado ? 'opacity:0.6; background:#ccc;' : ''}">
+            <div class="producto-item ${estaUsado ? 'cupon-usado' : ''}" style="${estaUsado ? 'background: #f0f0f0; opacity: 0.8;' : ''}">
                 <div>
                     <strong>${c.codigo}</strong><br>
                     ${c.tipo === "porcentaje" ? c.valor + "%" : "$" + c.valor} de descuento | 
                     ${c.unico === "si" ? "🔒 Uso único" : "🔄 Múltiple"}
-                    ${estaUsado ? '<br><span style="color:red;">❌ YA USADO</span>' : '<br><span style="color:green;">✅ Disponible</span>'}
+                    ${estaUsado ? '<div class="estado-usado">❌ YA USADO</div>' : '<div class="estado-disponible">✅ Disponible</div>'}
                 </div>
-                ${!estaUsado ? `<button class="btn btn-danger" onclick="eliminarCupon('${c.firestoreId}')">Eliminar</button>` : '<span style="color:#999;">🗑️ No disponible</span>'}
+                ${!estaUsado ? `<button class="btn btn-danger" onclick="eliminarCupon('${c.firestoreId}')">Eliminar</button>` : '<span style="color:#999; padding:8px 16px;">🗑️ No disponible</span>'}
             </div>
         `;
     }).join('') || "<p>No hay cupones</p>";
