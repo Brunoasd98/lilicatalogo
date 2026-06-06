@@ -102,26 +102,10 @@
         .stock-section { background: var(--card); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
         .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
         
-        /* Estilo para cupón usado - mejorado */
-        .cupon-usado {
-            background: #e8e8e8 !important;
-            opacity: 0.9;
-        }
-        body.dark .cupon-usado {
-            background: #2a2a2a !important;
-        }
-        .estado-usado {
-            color: #c0392b;
-            font-weight: bold;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-        .estado-disponible {
-            color: #27ae60;
-            font-weight: bold;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
+        .cupon-usado { background: #e8e8e8 !important; opacity: 0.9; }
+        body.dark .cupon-usado { background: #2a2a2a !important; }
+        .estado-usado { color: #c0392b; font-weight: bold; font-size: 0.8rem; margin-top: 5px; }
+        .estado-disponible { color: #27ae60; font-weight: bold; font-size: 0.8rem; margin-top: 5px; }
         
         @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .catalogos-container { grid-template-columns: 1fr; } .botones-container { flex-direction: column; } }
     </style>
@@ -269,7 +253,6 @@ let videos = [];
 let cupones = [];
 let carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
 let cuponAplicado = null;
-let cuponesUsados = JSON.parse(localStorage.getItem("lilia_cupones_usados") || "[]");
 let catalogoNaturaUrl = localStorage.getItem("lilia_catalogo_natura") || "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
 let catalogoAvonUrl = localStorage.getItem("lilia_catalogo_avon") || "https://www.avon.com.ar/catalogo";
 let editandoId = null;
@@ -370,27 +353,49 @@ function comprarAhora(id) {
     alert("Pedido enviado");
 }
 
-function aplicarCupon() {
+// ========== FUNCIÓN PARA VERIFICAR SI UN CUPÓN ESTÁ USADO (DESDE FIRESTORE) ==========
+async function isCuponUsado(codigo) {
+    const snapshot = await db.collection("cuponesUsados").where("codigo", "==", codigo).get();
+    return !snapshot.empty;
+}
+
+async function marcarCuponUsado(codigo) {
+    await db.collection("cuponesUsados").add({
+        codigo: codigo,
+        fecha: new Date().toISOString(),
+        usadoPor: "cliente"
+    });
+}
+
+async function aplicarCupon() {
     let codigo = document.getElementById("cuponCode").value.trim().toUpperCase();
     let cupon = cupones.find(c => c.codigo === codigo);
     if (!cupon) { alert("Cupón no válido"); return; }
-    if (cupon.unico === "si" && cuponesUsados.includes(codigo)) { alert("Ya usaste este cupón"); return; }
+    
+    // Verificar si ya fue usado (desde Firestore)
+    const usado = await isCuponUsado(codigo);
+    if (cupon.unico === "si" && usado) { 
+        alert("Este cupón ya fue usado"); 
+        return; 
+    }
+    
     cuponAplicado = cupon;
     document.getElementById("cuponInfo").innerHTML = `✅ Cupón aplicado: ${cupon.codigo} - ${cupon.tipo === "porcentaje" ? cupon.valor + "%" : "$" + cupon.valor}`;
     actualizarCarritoUI();
 }
 
-function enviarWhatsApp() {
+// ========== ENVIAR WHATSAPP CON MARCADO DE CUPÓN ==========
+async function enviarWhatsApp() {
     if (carrito.length === 0) { alert("Carrito vacío"); return; }
     
     // Restar stock
-    carrito.forEach(async (item) => {
+    for (let item of carrito) {
         let p = productos.find(p => p.firestoreId === item.id);
         if (p && p.stock >= item.cantidad) {
             p.stock -= item.cantidad;
             await db.collection("productos").doc(p.firestoreId).update({ stock: p.stock });
         }
-    });
+    }
     
     // Construir mensaje
     let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
@@ -403,6 +408,8 @@ function enviarWhatsApp() {
     });
     
     let total = subtotal;
+    let cuponUsadoEnEstePedido = false;
+    
     if (cuponAplicado) {
         let descuento = cuponAplicado.tipo === "porcentaje" ? subtotal * cuponAplicado.valor / 100 : cuponAplicado.valor;
         total = subtotal - descuento;
@@ -410,12 +417,8 @@ function enviarWhatsApp() {
         mensaje += `Cupón ${cuponAplicado.codigo}: -$${Math.round(descuento).toLocaleString()}\n\n`;
         
         if (cuponAplicado.unico === "si") {
-            cuponesUsados.push(cuponAplicado.codigo);
-            localStorage.setItem("lilia_cupones_usados", JSON.stringify(cuponesUsados));
-            const cuponRef = cupones.find(c => c.codigo === cuponAplicado.codigo);
-            if (cuponRef && cuponRef.firestoreId) {
-                db.collection("cupones").doc(cuponRef.firestoreId).update({ usado: true, usadoPor: new Date().toISOString() });
-            }
+            await marcarCuponUsado(cuponAplicado.codigo);
+            cuponUsadoEnEstePedido = true;
         }
     }
     
@@ -430,7 +433,7 @@ function enviarWhatsApp() {
     localStorage.setItem("lilia_carrito", JSON.stringify(carrito));
     actualizarCarritoUI();
     
-    // Recargar productos
+    // Recargar productos y cupones
     setTimeout(() => { cargarProductos(); cargarCupones(); }, 500);
     
     // Abrir WhatsApp
@@ -457,7 +460,7 @@ function actualizarSubcategorias() {
     }
 }
 
-function renderizarAdmin() {
+async function renderizarAdmin() {
     let activos = productos.filter(p => p.stock > 0);
     let agotados = productos.filter(p => p.stock === 0);
     document.getElementById("listaActivos").innerHTML = activos.map(p => `
@@ -489,9 +492,15 @@ function renderizarAdmin() {
         </div>
     `).join('') || "<p>No hay videos</p>";
     
-    // Mostrar cupones - AHORA SE PUEDEN ELIMINAR LOS USADOS
+    // Verificar cupones usados desde Firestore
+    let cuponesUsadosLista = [];
+    const snapshot = await db.collection("cuponesUsados").get();
+    snapshot.forEach(doc => {
+        cuponesUsadosLista.push(doc.data().codigo);
+    });
+    
     document.getElementById("listaCupones").innerHTML = cupones.map(c => {
-        const estaUsado = cuponesUsados.includes(c.codigo);
+        const estaUsado = cuponesUsadosLista.includes(c.codigo);
         return `
             <div class="producto-item ${estaUsado ? 'cupon-usado' : ''}">
                 <div>
@@ -620,7 +629,7 @@ function limpiarFormProducto() {
 }
 
 async function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if (!t || !u) { alert("Completá título y URL"); return; } await db.collection("videos").add({ titulo: t, url: u }); await cargarVideos(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; alert("Video agregado"); }
-async function agregarCupon() { let c = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let t = document.getElementById("cuponTipo").value; let v = parseInt(document.getElementById("cuponValor").value); let u = document.getElementById("cuponUnico").value; if (!c || !v) { alert("Completá código y valor"); return; } await db.collection("cupones").add({ codigo: c, tipo: t, valor: v, unico: u }); await cargarCupones(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupón agregado"); }
+async function agregarCupon() { let c = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let t = document.getElementById("cuponTipo").value; let v = parseInt(document.getElementById("cuponValor").value); let u = document.getElementById("cuponUnico").value; if (!c || !v) { alert("Completá código y valor"); return; } await db.collection("cupones").add({ codigo: c, tipo: t, valor: v, unico: u, usado: false }); await cargarCupones(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupón agregado"); }
 function guardarLinks() { let n = document.getElementById("linkNaturaInput").value.trim(); let a = document.getElementById("linkAvonInput").value.trim(); if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); } if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); } actualizarLinksCatalogo(); alert("Links guardados"); }
 
 // ========== LOGIN GOOGLE ==========
