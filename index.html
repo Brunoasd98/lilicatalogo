@@ -1,5 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Lilia Natura & Avon</title>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        /* Variables para modo claro/oscuro */
+        :root {
+            --bg: #fef5f0;
+            --card: white;
+            --text: #2c3e50;
+            --text-light: #666;
+            --accent: #d472a0;
+            --border: #ffe0e8;
+            --natura: #ef7d04;
+            --avon: #b3003b;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #17a2b8;
+        }
+        
+        body.dark {
+            --bg: #1a1a2e;
+            --card: #1e1e2f;
+            --text: #e0e0e0;
+            --text-light: #aaa;
+            --border: #2a2a3e;
+            --accent: #ff6b9d;
+        }
+        
+        body { background: var(--bg); color: var(--text); transition: 0.3s; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        /* Header */
+        .header { background: var(--card); border-radius: 30px; padding: 20px 35px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .logo h1 { background: linear-gradient(135deg, var(--accent), #b84c7c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .logo p { color: var(--text-light); font-size: 0.85rem; }
+        
+        /* Botones */
+        .btn { padding: 10px 24px; border: none; border-radius: 40px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-outline { background: transparent; border: 2px solid var(--accent); color: var(--accent); }
+        .btn-success { background: #25D366; color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        
+        /* Catálogos */
+        .catalogos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .catalogo-card { border-radius: 30px; padding: 25px; text-align: center; transition: 0.3s; cursor: pointer; }
+        .catalogo-card:first-child { background: var(--natura); }
+        .catalogo-card:last-child { background: var(--avon); }
+        .catalogo-card:hover { transform: scale(1.02); }
+        .catalogo-card h3 { color: white; font-size: 1.5rem; margin-bottom: 15px; }
+        .catalogo-card a { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 25px; border-radius: 50px; font-weight: bold; }
+        
+        /* Panel Admin */
+        .admin-panel { background: var(--card); border-radius: 30px; padding: 35px; margin-bottom: 30px; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .admin-panel.show { display: block; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .tab-btn { background: none; border: none; padding: 10px 25px; cursor: pointer; font-weight: 600; color: var(--text); border-radius: 30px; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-weight: 600; color: var(--accent); }
+        .form-group input, .form-group select { padding: 12px; border: 2px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text); }
+        
+        .producto-item { background: var(--border); border-radius: 20px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .producto-actions { display: flex; gap: 8px; }
+        
+        /* Filtros */
+        .filtros { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 25px; }
+        .fila-filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .cat-btn { padding: 8px 16px; border: 2px solid var(--accent); background: transparent; color: var(--accent); border-radius: 30px; cursor: pointer; }
+        .cat-btn.active, .cat-btn:hover { background: var(--accent); color: white; }
+        .cat-principal { font-weight: bold; color: white; border: none; }
+        .cat-principal.natura { background: var(--natura); }
+        .cat-principal.avon { background: var(--avon); }
+        .subcategoria-container { display: none; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+        .subcategoria-container.show { display: flex; }
+        .orden-select { padding: 8px 16px; border-radius: 30px; border: 2px solid var(--border); background: var(--card); color: var(--text); }
+        
+        /* Productos */
+        .catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
+        .producto-card { background: var(--card); border-radius: 25px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); position: relative; }
+        .producto-imagen { width: 100%; height: 250px; object-fit: cover; cursor: pointer; }
+        .destacado-badge { position: absolute; top: 15px; left: 15px; background: var(--warning); color: white; padding: 5px 12px; border-radius: 30px; font-size: 0.8rem; }
+        .descuento-badge { position: absolute; top: 15px; right: 15px; background: var(--danger); color: white; padding: 5px 12px; border-radius: 30px; }
+        .genero-badge { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; }
+        .producto-info { padding: 20px; }
+        .producto-nombre { font-size: 1.2rem; font-weight: bold; color: var(--accent); margin-bottom: 8px; }
+        .precio-original { font-size: 0.85rem; color: var(--text-light); text-decoration: line-through; }
+        .producto-precio { font-size: 1.3rem; font-weight: bold; color: var(--success); margin: 8px 0; }
+        .botones-container { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-carrito, .btn-comprar-ahora { flex: 1; padding: 10px; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        .btn-carrito { background: var(--accent); color: white; }
+        .btn-comprar-ahora { background: var(--info); color: white; }
+        
+        /* Buscador */
+        .buscador-wrapper { position: relative; margin-bottom: 25px; }
+        .buscador-wrapper input { width: 100%; padding: 16px 20px 16px 55px; border-radius: 60px; border: 2px solid var(--border); background: var(--card); color: var(--text); }
+        
+        /* Videos */
+        .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 20px; }
+        .video-card { background: var(--border); border-radius: 20px; overflow: hidden; }
+        .video-container { position: relative; padding-bottom: 56.25%; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .video-card h4 { padding: 15px; }
+        
+        /* Carrito */
+        .cart-floating { position: fixed; bottom: 30px; right: 30px; z-index: 1000; }
+        .cart-btn { background: var(--accent); color: white; width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; width: 25px; height: 25px; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        
+        .cart-sidebar { position: fixed; top: 0; right: -400px; width: 380px; height: 100%; background: var(--card); z-index: 1001; transition: right 0.3s; display: flex; flex-direction: column; overflow-y: auto; box-shadow: -5px 0 20px rgba(0,0,0,0.2); }
+        .cart-sidebar.open { right: 0; }
+        .cart-header { padding: 20px; background: var(--accent); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .cart-items { flex: 1; padding: 20px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .cart-total { padding: 20px; border-top: 2px solid var(--border); font-size: 1.2rem; font-weight: bold; }
+        
+        /* Modal imagen */
+        .image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; justify-content: center; align-items: center; cursor: pointer; }
+        .image-modal.show { display: flex; }
+        .image-modal img { max-width: 90%; max-height: 90%; border-radius: 20px; }
+        .image-modal .close-modal { position: absolute; top: 20px; right: 30px; font-size: 40px; color: white; cursor: pointer; background: none; border: none; }
+        
+        .dark-mode-btn { background: var(--card); border: 2px solid var(--accent); border-radius: 50px; padding: 8px 16px; cursor: pointer; }
+        .google-btn { background: white; border: 1px solid #dadce0; border-radius: 40px; padding: 8px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        
+        .stock-section { background: var(--card); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
+        .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
+        
+        @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .catalogos-container { grid-template-columns: 1fr; } .botones-container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo"><h1>💖 Lilia Natura & Avon</h1><p>Belleza y cuidado para vos</p></div>
+        <div class="header-actions">
+            <button class="dark-mode-btn" id="darkModeToggle">🌙</button>
+            <div id="googleLoginBtn">
+                <button class="google-btn" onclick="loginWithGoogle()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" height="18" alt="Google">
+                    Entrar con Google
+                </button>
+            </div>
+            <button class="btn btn-outline" id="btnLogout" onclick="logoutUser()" style="display:none;">Salir</button>
+        </div>
+    </div>
+
+    <div class="catalogos-container">
+        <div class="catalogo-card"><h3>📘 Catálogo Natura</h3><a href="#" id="catalogoNaturaLink" target="_blank">Ver catálogo →</a></div>
+        <div class="catalogo-card"><h3>💚 Catálogo Avon</h3><a href="#" id="catalogoAvonLink" target="_blank">Ver catálogo →</a></div>
+    </div>
+
+    <div id="adminPanel" class="admin-panel">
+        <h2>🛍️ Panel de Administración</h2>
+        <p>Conectado como: <strong id="userEmailDisplay"></strong></p>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="productos">📦 Productos</button>
+            <button class="tab-btn" data-tab="videos">🎬 Mi Stock</button>
+            <button class="tab-btn" data-tab="catalogos">📘 Catálogos</button>
+            <button class="tab-btn" data-tab="cupones">🏷️ Cupones</button>
+        </div>
+
+        <div id="productos" class="tab-content active">
+            <h3>Agregar Producto</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Nombre</label><input type="text" id="prodNombre" placeholder="Ej: Jabón de Rosa"></div>
+                <div class="form-group"><label>Marca</label><select id="prodMarca"><option value="Natura">Natura</option><option value="Avon">Avon</option></select></div>
+                <div class="form-group"><label>Género</label><select id="prodGenero"><option value="Mujer">Mujer</option><option value="Hombre">Hombre</option><option value="Infantil">Infantil</option><option value="Unisex">Unisex</option></select></div>
+                <div class="form-group"><label>Categoría</label><select id="prodCategoria"><option value="Perfumes">Perfumes</option><option value="Jabones">Jabones</option><option value="Cremas">Cremas</option><option value="Maquillaje">Maquillaje</option><option value="Cabello">Cabello</option><option value="Otros">Otros</option></select></div>
+                <div class="form-group"><label>Precio</label><input type="text" id="prodPrecio" placeholder="$8000"></div>
+                <div class="form-group"><label>Precio referencia</label><input type="text" id="prodPrecioRef" placeholder="$10000"></div>
+                <div class="form-group"><label>Stock</label><input type="number" id="prodStock" placeholder="4"></div>
+                <div class="form-group"><label><input type="checkbox" id="prodDestacado"> Producto Destacado ⭐</label></div>
+                <div class="form-group"><label>URL imagen</label><input type="text" id="prodImagen" placeholder="https://..."></div>
+                <div class="form-group"><label>O subir imagen</label><input type="file" id="prodImagenFile" accept="image/*"></div>
+            </div>
+            <button class="btn btn-primary" id="btnGuardar">Guardar</button>
+            <button class="btn btn-outline" id="btnCancelar" style="display:none;">Cancelar</button>
+            <div style="margin-top: 30px;"><h3>Productos Activos</h3><div id="listaActivos"></div><h3>Productos Agotados</h3><div id="listaAgotados"></div></div>
+        </div>
+
+        <div id="videos" class="tab-content">
+            <h3>Agregar Video</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Título</label><input type="text" id="videoTitulo"></div>
+                <div class="form-group"><label>URL (YouTube/Dailymotion)</label><input type="text" id="videoUrl"></div>
+            </div>
+            <button class="btn btn-primary" id="btnAddVideo">Agregar Video</button>
+            <div id="listaVideosAdmin" style="margin-top: 20px;"></div>
+        </div>
+
+        <div id="catalogos" class="tab-content">
+            <h3>Links de Catálogos</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Link Catálogo Natura</label><input type="text" id="linkNaturaInput" placeholder="https://..."></div>
+                <div class="form-group"><label>Link Catálogo Avon</label><input type="text" id="linkAvonInput" placeholder="https://..."></div>
+            </div>
+            <button class="btn btn-primary" id="guardarLinksBtn">Guardar Links</button>
+        </div>
+
+        <div id="cupones" class="tab-content">
+            <h3>Agregar Cupón</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Código</label><input type="text" id="cuponCodigo" placeholder="DESCUENTO10"></div>
+                <div class="form-group"><label>Tipo</label><select id="cuponTipo"><option value="porcentaje">Porcentaje (%)</option><option value="fijo">Monto fijo ($)</option></select></div>
+                <div class="form-group"><label>Valor</label><input type="number" id="cuponValor" placeholder="10"></div>
+                <div class="form-group"><label>Uso único</label><select id="cuponUnico"><option value="si">Sí (1 vez por cliente)</option><option value="no">No (múltiples usos)</option></select></div>
+            </div>
+            <button class="btn btn-primary" id="btnAgregarCupon">Agregar Cupón</button>
+            <div id="listaCupones" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <div class="filtros">
+        <div class="fila-filtros">
+            <button class="cat-btn active" data-marca="all">📋 Todos</button>
+            <button class="cat-btn cat-principal avon" data-marca="Avon">💚 Avon</button>
+            <button class="cat-btn cat-principal natura" data-marca="Natura">🌸 Natura</button>
+            <button class="cat-btn" data-genero="Mujer">👩 Mujer</button>
+            <button class="cat-btn" data-genero="Hombre">👨 Hombre</button>
+            <button class="cat-btn" data-genero="Infantil">🧒 Infantil</button>
+            <button class="cat-btn" data-genero="Unisex">👥 Unisex</button>
+        </div>
+        <div id="subcategoriasContainer" class="subcategoria-container"></div>
+        <div class="fila-filtros" style="justify-content: flex-end;">
+            <select id="ordenSelect" class="orden-select">
+                <option value="nombre">📝 Ordenar por nombre</option>
+                <option value="destacado">⭐ Destacados primero</option>
+                <option value="precio-menor">💰 Precio: menor a mayor</option>
+                <option value="precio-mayor">💰 Precio: mayor a menor</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="buscador-wrapper"><div style="position:absolute; left:20px; top:50%; transform:translateY(-50%);">🔍</div><input type="text" id="searchInput" placeholder="Buscar productos..."></div>
+
+    <div class="stock-section"><h2>📹 Mi Stock</h2><div id="videosPublicos" class="videos-grid"></div></div>
+
+    <div id="catalogoPublico" class="catalogo"></div>
+</div>
+
+<div id="imageModal" class="image-modal" onclick="closeImageModal()">
+    <button class="close-modal" onclick="closeImageModal()">✕</button>
+    <img id="modalImage" src="">
+</div>
+
+<div class="cart-floating"><div class="cart-btn" id="cartBtn">🛒<span class="cart-count" id="cartCount">0</span></div></div>
+
+<div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header"><h3>🛒 Mi Pedido</h3><button class="btn" id="closeCart" style="background:white; color:var(--accent);">✕</button></div>
+    <div class="cart-items" id="cartItems"></div>
+    <div style="padding: 0 20px;">
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="cuponCode" placeholder="Código de descuento" style="flex:1; padding:10px; border-radius:30px; border:1px solid var(--border); background:var(--card); color:var(--text);">
+            <button class="btn btn-outline" id="aplicarCuponBtn">Aplicar</button>
+        </div>
+        <div id="cuponInfo" style="color:#2ecc71; margin-top:8px;"></div>
+    </div>
+    <div class="cart-total" id="cartTotal">Total: $0</div>
+    <div style="padding:20px;"><button class="btn btn-success" id="whatsappBtn" style="width:100%;">📱 Enviar por WhatsApp</button></div>
+</div>
+
 <script>
-    // Configuración de Firebase
+    // Firebase
     const firebaseConfig = {
         apiKey: "AIzaSyB4l7EZIsVcZlnKB0H8UH7L3uiJ5ybf6lc",
         authDomain: "lilia-catalogo.firebaseapp.com",
@@ -9,15 +289,14 @@
         appId: "1:846476027363:web:f85192e2c3022f5bcf6cd6"
     };
     
-    // Inicializar Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
     const provider = new firebase.auth.GoogleAuthProvider();
     
-    const CORREO_PERMITIDO = "brunoromero637@gmail.com";
+    const CORREO_ADMIN = "brunoromero637@gmail.com";
     
-    // Variables globales
+    // Variables
     let productos = [];
     let videos = [];
     let cupones = [];
@@ -29,7 +308,7 @@
     let editandoId = null;
     let marcaActual = "all", categoriaActual = "all", generoActual = "all", ordenActual = "nombre", busquedaActual = "";
     
-    // ========== FUNCIONES DE UI ==========
+    // UI Functions
     function openImageModal(url) {
         document.getElementById("modalImage").src = url;
         document.getElementById("imageModal").classList.add("show");
@@ -38,7 +317,6 @@
         document.getElementById("imageModal").classList.remove("show");
     }
     
-    // Modo oscuro
     function initDarkMode() {
         const dark = localStorage.getItem("darkMode") === "true";
         if (dark) document.body.classList.add("dark");
@@ -54,7 +332,6 @@
         }
     }
     
-    // Convertir URL de video
     function convertirUrlVideo(url) {
         if (url.includes("dailymotion.com/video/")) {
             let id = url.match(/video\/([a-zA-Z0-9]+)/);
@@ -65,7 +342,6 @@
         return url;
     }
     
-    // Actualizar links de catálogos
     function actualizarLinks() {
         const ln = document.getElementById("catalogoNaturaLink");
         const la = document.getElementById("catalogoAvonLink");
@@ -73,15 +349,14 @@
         if (la) la.href = catalogoAvonUrl;
     }
     
-    // Guardar links manualmente
-    window.guardarLinksManual = function() {
+    function guardarLinksManual() {
         const n = document.getElementById("linkNaturaInput").value.trim();
         const a = document.getElementById("linkAvonInput").value.trim();
         if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); }
         if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); }
         actualizarLinks();
         alert("Links actualizados");
-    };
+    }
     
     // Carrito
     function actualizarCarritoUI() {
@@ -199,7 +474,7 @@
                     <div><strong>${p.nombre} ${p.destacado ? '⭐' : ''}</strong><br>💰 ${p.precio} | 📦 Stock: ${p.stock} | ${p.marca} - ${p.categoria}</div>
                     <div class="producto-actions">
                         <button class="btn btn-warning" onclick="editarProducto('${p.firestoreId}')">Editar</button>
-                        <button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')" style="background:#17a2b8; color:white;">Duplicar</button>
+                        <button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')">Duplicar</button>
                         <button class="btn btn-danger" onclick="eliminarProducto('${p.firestoreId}')">Eliminar</button>
                     </div>
                 </div>
@@ -212,7 +487,7 @@
                     <div><strong>${p.nombre}</strong><br>💰 ${p.precio} | ⚠️ AGOTADO</div>
                     <div class="producto-actions">
                         <button class="btn btn-warning" onclick="editarProducto('${p.firestoreId}')">Editar</button>
-                        <button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')" style="background:#17a2b8; color:white;">Duplicar</button>
+                        <button class="btn btn-info" onclick="duplicarProducto('${p.firestoreId}')">Duplicar</button>
                         <button class="btn btn-danger" onclick="eliminarProducto('${p.firestoreId}')">Eliminar</button>
                     </div>
                 </div>
@@ -308,9 +583,9 @@
         
         if (videosPublicos) {
             videosPublicos.innerHTML = videos.map(v => `
-                <div class="video-card" style="background:var(--border-light, #f0f0f0); border-radius:20px; overflow:hidden;">
-                    <div style="position:relative; padding-bottom:56.25%;"><iframe src="${convertirUrlVideo(v.url)}" style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"></iframe></div>
-                    <h4 style="padding:15px;">${v.titulo}</h4>
+                <div class="video-card">
+                    <div class="video-container"><iframe src="${convertirUrlVideo(v.url)}" frameborder="0" allowfullscreen></iframe></div>
+                    <h4>${v.titulo}</h4>
                 </div>
             `).join('') || "<p style='text-align:center;'>No hay videos cargados</p>";
         }
@@ -477,11 +752,11 @@
         try {
             const result = await auth.signInWithPopup(provider);
             const user = result.user;
-            if (user.email === CORREO_PERMITIDO) {
+            if (user.email === CORREO_ADMIN) {
                 localStorage.setItem("admin_logged", "true");
                 location.reload();
             } else {
-                alert("Acceso denegado");
+                alert("Acceso denegado. Solo el administrador puede entrar.");
                 await auth.signOut();
             }
         } catch (error) {
@@ -541,35 +816,25 @@
         document.getElementById("closeCart").onclick = () => document.getElementById("cartSidebar").classList.remove("open");
         document.getElementById("whatsappBtn").onclick = enviarWhatsApp;
         document.getElementById("aplicarCuponBtn").onclick = aplicarCupon;
+        document.getElementById("btnGuardar").onclick = guardarProductoForm;
+        document.getElementById("btnCancelar").onclick = limpiarForm;
+        document.getElementById("btnAddVideo").onclick = agregarVideo;
+        document.getElementById("btnAgregarCupon").onclick = agregarCupon;
+        document.getElementById("guardarLinksBtn").onclick = guardarLinksManual;
         
-        // ⭐ BOTONES CORREGIDOS ⭐
-        const btnGuardar = document.getElementById("btnGuardar");
-        const btnAddVideo = document.getElementById("btnAddVideo");
-        const btnAgregarCupon = document.getElementById("btnAgregarCupon");
-        const btnCancelar = document.getElementById("btnCancelar");
-        const guardarLinksBtn = document.getElementById("guardarLinksBtn");
-        
-        if (btnGuardar) btnGuardar.onclick = guardarProductoForm;
-        if (btnAddVideo) btnAddVideo.onclick = agregarVideo;
-        if (btnAgregarCupon) btnAgregarCupon.onclick = agregarCupon;
-        if (btnCancelar) btnCancelar.onclick = limpiarForm;
-        if (guardarLinksBtn) guardarLinksBtn.onclick = () => window.guardarLinksManual();
-        
-        // Auth state
+        // Auth
         auth.onAuthStateChanged((user) => {
             const adminPanel = document.getElementById("adminPanel");
             const btnLogin = document.getElementById("googleLoginBtn");
             const btnLogout = document.getElementById("btnLogout");
             const userEmail = document.getElementById("userEmailDisplay");
-            if (user && user.email === CORREO_PERMITIDO) {
+            if (user && user.email === CORREO_ADMIN) {
                 if (adminPanel) adminPanel.classList.add("show");
                 if (btnLogin) btnLogin.style.display = "none";
                 if (btnLogout) btnLogout.style.display = "inline-block";
                 if (userEmail) userEmail.innerHTML = user.email;
-                const ln = document.getElementById("linkNaturaInput");
-                const la = document.getElementById("linkAvonInput");
-                if (ln) ln.value = catalogoNaturaUrl;
-                if (la) la.value = catalogoAvonUrl;
+                document.getElementById("linkNaturaInput").value = catalogoNaturaUrl;
+                document.getElementById("linkAvonInput").value = catalogoAvonUrl;
             } else {
                 if (adminPanel) adminPanel.classList.remove("show");
                 if (btnLogin) btnLogin.style.display = "block";
@@ -580,6 +845,7 @@
         actualizarSubcategorias();
         actualizarCarritoUI();
         
+        // Exponer funciones globales
         window.agregarAlCarrito = agregarAlCarrito;
         window.eliminarDelCarrito = eliminarDelCarrito;
         window.actualizarCantidad = actualizarCantidad;
@@ -592,3 +858,5 @@
         window.closeImageModal = closeImageModal;
     });
 </script>
+</body>
+</html>
