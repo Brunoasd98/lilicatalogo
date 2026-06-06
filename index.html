@@ -60,13 +60,13 @@
                     if (btnLogout) btnLogout.style.display = "inline-block";
                     document.getElementById("userEmailDisplay").innerHTML = user.email;
                     
-                    // Cargar los valores actuales en los inputs DESPUÉS de que cargarDatos() se ejecute
-                    setTimeout(() => {
-                        const naturaLink = localStorage.getItem("lilia_catalogo_natura");
-                        const avonLink = localStorage.getItem("lilia_catalogo_avon");
-                        if (naturaLink) document.getElementById("linkNaturaInput").value = naturaLink;
-                        if (avonLink) document.getElementById("linkAvonInput").value = avonLink;
-                    }, 100);
+                    // Cargar los valores actuales en los inputs
+                    const naturaLink = localStorage.getItem("lilia_catalogo_natura");
+                    const avonLink = localStorage.getItem("lilia_catalogo_avon");
+                    const linkNaturaInput = document.getElementById("linkNaturaInput");
+                    const linkAvonInput = document.getElementById("linkAvonInput");
+                    if (linkNaturaInput && naturaLink) linkNaturaInput.value = naturaLink;
+                    if (linkAvonInput && avonLink) linkAvonInput.value = avonLink;
                 } else {
                     if (adminPanel) adminPanel.classList.remove("show");
                     if (btnLogin) btnLogin.style.display = "block";
@@ -433,22 +433,26 @@
         const categorias = ["Perfumes", "Jabones", "Cremas", "Maquillaje", "Cabello", "Otros"];
         
         if (marcaActual === "all") {
-            container.classList.remove("show");
-            container.innerHTML = "";
+            if (container) {
+                container.classList.remove("show");
+                container.innerHTML = "";
+            }
             return;
         }
         
-        container.classList.add("show");
-        container.innerHTML = categorias.map(cat => `<button class="cat-btn subcategoria-filtro ${categoriaActual === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`).join('');
-        
-        document.querySelectorAll(".subcategoria-filtro").forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active"));
-                btn.classList.add("active");
-                categoriaActual = btn.dataset.cat;
-                renderizarPublico();
-            };
-        });
+        if (container) {
+            container.classList.add("show");
+            container.innerHTML = categorias.map(cat => `<button class="cat-btn subcategoria-filtro ${categoriaActual === cat ? 'active' : ''}" data-cat="${cat}">${cat}</button>`).join('');
+            
+            document.querySelectorAll(".subcategoria-filtro").forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll(".subcategoria-filtro").forEach(b => b.classList.remove("active"));
+                    btn.classList.add("active");
+                    categoriaActual = btn.dataset.cat;
+                    renderizarPublico();
+                };
+            });
+        }
     }
 
     function renderizarAdmin() {
@@ -598,24 +602,29 @@
         document.getElementById("btnImportar").onclick = () => document.getElementById("importFile").click();
         document.getElementById("importFile").onchange = e => { if(e.target.files[0]) importarDatos(e.target.files[0]); e.target.value=""; };
         
-        // Botón guardar links - CORREGIDO
-        document.getElementById("guardarLinksBtn").onclick = () => { 
-            const nuevaUrlNatura = document.getElementById("linkNaturaInput").value.trim(); 
-            const nuevaUrlAvon = document.getElementById("linkAvonInput").value.trim(); 
-            if (nuevaUrlNatura) {
-                catalogoNaturaUrl = nuevaUrlNatura;
-                localStorage.setItem("lilia_catalogo_natura", catalogoNaturaUrl);
-            }
-            if (nuevaUrlAvon) {
-                catalogoAvonUrl = nuevaUrlAvon;
-                localStorage.setItem("lilia_catalogo_avon", catalogoAvonUrl);
-            }
-            actualizarLinksCatalogo();
-            guardarTodo();
-            alert("Links actualizados correctamente");
-            console.log("Natura URL:", catalogoNaturaUrl);
-            console.log("Avon URL:", catalogoAvonUrl);
-        };
+        // Botón guardar links - VERIFICADO QUE EXISTE
+        const guardarLinksBtn = document.getElementById("guardarLinksBtn");
+        if (guardarLinksBtn) {
+            guardarLinksBtn.addEventListener("click", () => { 
+                const nuevaUrlNatura = document.getElementById("linkNaturaInput").value.trim(); 
+                const nuevaUrlAvon = document.getElementById("linkAvonInput").value.trim(); 
+                if (nuevaUrlNatura) {
+                    catalogoNaturaUrl = nuevaUrlNatura;
+                    localStorage.setItem("lilia_catalogo_natura", catalogoNaturaUrl);
+                }
+                if (nuevaUrlAvon) {
+                    catalogoAvonUrl = nuevaUrlAvon;
+                    localStorage.setItem("lilia_catalogo_avon", catalogoAvonUrl);
+                }
+                actualizarLinksCatalogo();
+                guardarTodo();
+                alert("Links actualizados correctamente");
+                console.log("Natura URL guardada:", catalogoNaturaUrl);
+                console.log("Avon URL guardada:", catalogoAvonUrl);
+            });
+        } else {
+            console.error("No se encontró el botón guardarLinksBtn");
+        }
         
         window.agregarAlCarrito = agregarAlCarrito;
         window.eliminarDelCarrito = eliminarDelCarrito;
