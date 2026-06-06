@@ -26,12 +26,14 @@
         .btn-info { background: #17a2b8; color: white; }
         .btn-success { background: #25D366; color: white; }
         
-        .catalogos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .catalogos-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
         .catalogo-card { border-radius: 30px; padding: 25px; text-align: center; }
-        .catalogo-card:first-child { background: var(--natura); }
-        .catalogo-card:last-child { background: var(--avon); }
+        .catalogo-card:first-child { background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); }
+        .catalogo-card:nth-child(2) { background: var(--natura); }
+        .catalogo-card:nth-child(3) { background: var(--avon); }
         .catalogo-card h3 { color: white; font-size: 1.5rem; margin-bottom: 15px; }
-        .catalogo-card a { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 25px; border-radius: 50px; }
+        .catalogo-card a { display: inline-block; background: rgba(255,255,255,0.2); color: white; text-decoration: none; padding: 10px 25px; border-radius: 50px; transition: 0.3s; }
+        .catalogo-card a:hover { background: rgba(255,255,255,0.35); transform: scale(1.05); }
         
         .admin-panel { background: var(--card); border-radius: 30px; padding: 35px; margin-bottom: 30px; display: none; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
         .admin-panel.show { display: block; }
@@ -107,7 +109,11 @@
         .estado-usado { color: #c0392b; font-weight: bold; font-size: 0.8rem; margin-top: 5px; }
         .estado-disponible { color: #27ae60; font-weight: bold; font-size: 0.8rem; margin-top: 5px; }
         
-        @media (max-width: 768px) { .cart-sidebar { width: 100%; right: -100%; } .catalogos-container { grid-template-columns: 1fr; } .botones-container { flex-direction: column; } }
+        @media (max-width: 768px) { 
+            .cart-sidebar { width: 100%; right: -100%; } 
+            .catalogos-container { grid-template-columns: 1fr; } 
+            .botones-container { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
@@ -122,6 +128,7 @@
     </div>
 
     <div class="catalogos-container">
+        <div class="catalogo-card"><h3>📞 Contacto</h3><a href="https://wa.me/541160197507" target="_blank">WhatsApp →</a></div>
         <div class="catalogo-card"><h3>📘 Catálogo Natura</h3><a href="#" id="catalogoNaturaLink" target="_blank">Ver catálogo →</a></div>
         <div class="catalogo-card"><h3>💚 Catálogo Avon</h3><a href="#" id="catalogoAvonLink" target="_blank">Ver catálogo →</a></div>
     </div>
@@ -353,7 +360,6 @@ function comprarAhora(id) {
     alert("Pedido enviado");
 }
 
-// ========== FUNCIÓN PARA VERIFICAR SI UN CUPÓN ESTÁ USADO (DESDE FIRESTORE) ==========
 async function isCuponUsado(codigo) {
     const snapshot = await db.collection("cuponesUsados").where("codigo", "==", codigo).get();
     return !snapshot.empty;
@@ -372,7 +378,6 @@ async function aplicarCupon() {
     let cupon = cupones.find(c => c.codigo === codigo);
     if (!cupon) { alert("Cupón no válido"); return; }
     
-    // Verificar si ya fue usado (desde Firestore)
     const usado = await isCuponUsado(codigo);
     if (cupon.unico === "si" && usado) { 
         alert("Este cupón ya fue usado"); 
@@ -384,11 +389,9 @@ async function aplicarCupon() {
     actualizarCarritoUI();
 }
 
-// ========== ENVIAR WHATSAPP CON MARCADO DE CUPÓN ==========
 async function enviarWhatsApp() {
     if (carrito.length === 0) { alert("Carrito vacío"); return; }
     
-    // Restar stock
     for (let item of carrito) {
         let p = productos.find(p => p.firestoreId === item.id);
         if (p && p.stock >= item.cantidad) {
@@ -397,7 +400,6 @@ async function enviarWhatsApp() {
         }
     }
     
-    // Construir mensaje
     let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
     let subtotal = 0;
     
@@ -408,8 +410,6 @@ async function enviarWhatsApp() {
     });
     
     let total = subtotal;
-    let cuponUsadoEnEstePedido = false;
-    
     if (cuponAplicado) {
         let descuento = cuponAplicado.tipo === "porcentaje" ? subtotal * cuponAplicado.valor / 100 : cuponAplicado.valor;
         total = subtotal - descuento;
@@ -418,14 +418,12 @@ async function enviarWhatsApp() {
         
         if (cuponAplicado.unico === "si") {
             await marcarCuponUsado(cuponAplicado.codigo);
-            cuponUsadoEnEstePedido = true;
         }
     }
     
     mensaje += `TOTAL: $${total.toLocaleString()}\n\n`;
     mensaje += `Hola! Quiero hacer este pedido. Me confirmas disponibilidad?`;
     
-    // Limpiar carrito y cupón
     carrito = [];
     cuponAplicado = null;
     document.getElementById("cuponInfo").innerHTML = "";
@@ -433,10 +431,8 @@ async function enviarWhatsApp() {
     localStorage.setItem("lilia_carrito", JSON.stringify(carrito));
     actualizarCarritoUI();
     
-    // Recargar productos y cupones
     setTimeout(() => { cargarProductos(); cargarCupones(); }, 500);
     
-    // Abrir WhatsApp
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
     alert("Pedido enviado! El stock se ha actualizado.");
 }
@@ -492,12 +488,9 @@ async function renderizarAdmin() {
         </div>
     `).join('') || "<p>No hay videos</p>";
     
-    // Verificar cupones usados desde Firestore
     let cuponesUsadosLista = [];
     const snapshot = await db.collection("cuponesUsados").get();
-    snapshot.forEach(doc => {
-        cuponesUsadosLista.push(doc.data().codigo);
-    });
+    snapshot.forEach(doc => { cuponesUsadosLista.push(doc.data().codigo); });
     
     document.getElementById("listaCupones").innerHTML = cupones.map(c => {
         const estaUsado = cuponesUsadosLista.includes(c.codigo);
@@ -629,7 +622,7 @@ function limpiarFormProducto() {
 }
 
 async function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if (!t || !u) { alert("Completá título y URL"); return; } await db.collection("videos").add({ titulo: t, url: u }); await cargarVideos(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; alert("Video agregado"); }
-async function agregarCupon() { let c = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let t = document.getElementById("cuponTipo").value; let v = parseInt(document.getElementById("cuponValor").value); let u = document.getElementById("cuponUnico").value; if (!c || !v) { alert("Completá código y valor"); return; } await db.collection("cupones").add({ codigo: c, tipo: t, valor: v, unico: u, usado: false }); await cargarCupones(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupón agregado"); }
+async function agregarCupon() { let c = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let t = document.getElementById("cuponTipo").value; let v = parseInt(document.getElementById("cuponValor").value); let u = document.getElementById("cuponUnico").value; if (!c || !v) { alert("Completá código y valor"); return; } await db.collection("cupones").add({ codigo: c, tipo: t, valor: v, unico: u }); await cargarCupones(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupón agregado"); }
 function guardarLinks() { let n = document.getElementById("linkNaturaInput").value.trim(); let a = document.getElementById("linkAvonInput").value.trim(); if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); } if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); } actualizarLinksCatalogo(); alert("Links guardados"); }
 
 // ========== LOGIN GOOGLE ==========
@@ -655,7 +648,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     await cargarVideos();
     await cargarCupones();
     
-    // Tabs
     document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
@@ -665,7 +657,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     });
     
-    // Filtros
     document.querySelectorAll("[data-marca]").forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll("[data-marca]").forEach(b => b.classList.remove("active"));
@@ -702,7 +693,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnGoogleLogin").onclick = loginGoogle;
     document.getElementById("btnLogout").onclick = logout;
     
-    // Auth
     auth.onAuthStateChanged((user) => {
         let adminPanel = document.getElementById("adminPanel");
         let btnLogin = document.getElementById("btnGoogleLogin");
@@ -725,7 +715,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     actualizarSubcategorias();
     actualizarCarritoUI();
     
-    // Exponer funciones
     window.agregarAlCarrito = agregarAlCarrito;
     window.eliminarDelCarrito = eliminarDelCarrito;
     window.actualizarCantidad = actualizarCantidad;
