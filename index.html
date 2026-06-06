@@ -102,14 +102,13 @@
         .stock-section { background: var(--card); border-radius: 30px; padding: 30px; margin-bottom: 35px; }
         .stock-section h2 { color: var(--accent); margin-bottom: 20px; }
         
-        /* Estilo para cupón usado */
+        /* Estilo para cupón usado - mejorado */
         .cupon-usado {
-            opacity: 0.7;
-            background: #e0e0e0 !important;
-            filter: grayscale(0.2);
+            background: #e8e8e8 !important;
+            opacity: 0.9;
         }
-        .cupon-usado .btn-danger {
-            display: none;
+        body.dark .cupon-usado {
+            background: #2a2a2a !important;
         }
         .estado-usado {
             color: #c0392b;
@@ -393,7 +392,7 @@ function enviarWhatsApp() {
         }
     });
     
-    // Construir mensaje - SIN CARACTERES RAROS
+    // Construir mensaje
     let mensaje = "PEDIDO LILIA NATURA & AVON\n\n";
     let subtotal = 0;
     
@@ -490,18 +489,18 @@ function renderizarAdmin() {
         </div>
     `).join('') || "<p>No hay videos</p>";
     
-    // Mostrar cupones con estado mejorado
+    // Mostrar cupones - AHORA SE PUEDEN ELIMINAR LOS USADOS
     document.getElementById("listaCupones").innerHTML = cupones.map(c => {
         const estaUsado = cuponesUsados.includes(c.codigo);
         return `
-            <div class="producto-item ${estaUsado ? 'cupon-usado' : ''}" style="${estaUsado ? 'background: #f0f0f0; opacity: 0.8;' : ''}">
+            <div class="producto-item ${estaUsado ? 'cupon-usado' : ''}">
                 <div>
                     <strong>${c.codigo}</strong><br>
                     ${c.tipo === "porcentaje" ? c.valor + "%" : "$" + c.valor} de descuento | 
                     ${c.unico === "si" ? "🔒 Uso único" : "🔄 Múltiple"}
                     ${estaUsado ? '<div class="estado-usado">❌ YA USADO</div>' : '<div class="estado-disponible">✅ Disponible</div>'}
                 </div>
-                ${!estaUsado ? `<button class="btn btn-danger" onclick="eliminarCupon('${c.firestoreId}')">Eliminar</button>` : '<span style="color:#999; padding:8px 16px;">🗑️ No disponible</span>'}
+                <button class="btn btn-danger" onclick="eliminarCupon('${c.firestoreId}')">Eliminar</button>
             </div>
         `;
     }).join('') || "<p>No hay cupones</p>";
@@ -563,7 +562,7 @@ async function guardarProducto(p) { if (p.firestoreId) { let { firestoreId, ...d
 async function eliminarProducto(id) { if (confirm("¿Eliminar?")) { await db.collection("productos").doc(id).delete(); await cargarProductos(); } }
 async function duplicarProducto(id) { let o = productos.find(p => p.firestoreId === id); if (o) { let n = { ...o, nombre: o.nombre + " (Copia)", stock: o.stock }; delete n.firestoreId; await guardarProducto(n); alert("Duplicado"); } }
 async function eliminarVideo(id) { if (confirm("¿Eliminar video?")) { await db.collection("videos").doc(id).delete(); await cargarVideos(); } }
-async function eliminarCupon(id) { if (confirm("¿Eliminar cupón?")) { await db.collection("cupones").doc(id).delete(); await cargarCupones(); } }
+async function eliminarCupon(id) { if (confirm("¿Eliminar este cupón?")) { await db.collection("cupones").doc(id).delete(); await cargarCupones(); } }
 
 async function guardarProductoForm() {
     let nombre = document.getElementById("prodNombre").value.trim();
