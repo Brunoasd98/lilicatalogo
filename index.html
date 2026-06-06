@@ -403,7 +403,10 @@ function actualizarCantidad(id, nueva) {
 
 async function comprarAhora(id) {
     let p = productos.find(p => p.firestoreId === id);
-    if (!p || p.stock <= 0) { alert("Producto sin stock"); return; }
+    if (!p || p.stock <= 0) { 
+        alert("Producto sin stock"); 
+        return; 
+    }
     
     // Restar stock localmente
     p.stock--;
@@ -424,7 +427,8 @@ async function comprarAhora(id) {
     // Abrir WhatsApp
     const url = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
-    alert("Pedido enviado! Stock actualizado.");
+    
+    // SIN ALERT - solo se abre WhatsApp
 }
 
 async function isCuponUsado(codigo) {
@@ -457,7 +461,10 @@ async function aplicarCupon() {
 }
 
 async function enviarWhatsApp() {
-    if (carrito.length === 0) { alert("Carrito vacío"); return; }
+    if (carrito.length === 0) { 
+        alert("Carrito vacío"); 
+        return; 
+    }
     
     // Restar stock y actualizar en Firestore
     for (let item of carrito) {
@@ -506,7 +513,8 @@ async function enviarWhatsApp() {
     
     // Abrir WhatsApp
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
-    alert("Pedido enviado! El stock se ha actualizado.");
+    
+    // SIN ALERT - solo se abre WhatsApp
 }
 
 // ========== RENDERIZAR ==========
