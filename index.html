@@ -78,7 +78,6 @@
         .buscador-wrapper { position: relative; margin-bottom: 25px; }
         .buscador-wrapper input { width: 100%; padding: 16px 20px 16px 55px; border-radius: 60px; border: 2px solid var(--border); background: var(--card); color: var(--text); }
         
-        /* Estilos de videos - CORREGIDOS PARA MÓVIL */
         .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
         .video-card { background: var(--border); border-radius: 15px; overflow: hidden; width: 100%; }
         .video-container { position: relative; width: 100%; padding-bottom: 56.25%; background: #000; overflow: hidden; }
@@ -115,7 +114,6 @@
             .cart-sidebar { width: 100%; right: -100%; } 
             .catalogos-container { grid-template-columns: 1fr; } 
             .botones-container { flex-direction: column; }
-            /* Correcciones para videos en móvil */
             .videos-grid { grid-template-columns: 1fr; gap: 15px; }
             .video-card { border-radius: 12px; }
             .video-card h4 { font-size: 0.85rem; padding: 10px 12px; line-height: 1.4; }
@@ -266,10 +264,57 @@ let videos = [];
 let cupones = [];
 let carrito = JSON.parse(localStorage.getItem("lilia_carrito") || "[]");
 let cuponAplicado = null;
-let catalogoNaturaUrl = localStorage.getItem("lilia_catalogo_natura") || "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
-let catalogoAvonUrl = localStorage.getItem("lilia_catalogo_avon") || "https://www.avon.com.ar/catalogo";
+let catalogoNaturaUrl = "https://ar.natura.digital-catalogue.com/ar/2026/09/revista/natura-ciclo-9/view/index.html";
+let catalogoAvonUrl = "https://www.avon.com.ar/";
 let editandoId = null;
 let marcaActual = "all", categoriaActual = "all", generoActual = "all", ordenActual = "nombre", busquedaActual = "";
+
+// ========== FUNCIONES DE LINKS EN FIRESTORE ==========
+async function cargarLinksFirestore() {
+    try {
+        const docRef = db.collection("configuracion").doc("links");
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            const data = docSnap.data();
+            if (data.naturaUrl) catalogoNaturaUrl = data.naturaUrl;
+            if (data.avonUrl) catalogoAvonUrl = data.avonUrl;
+            console.log("Links cargados desde Firestore:", catalogoNaturaUrl, catalogoAvonUrl);
+        } else {
+            // Crear documento por defecto
+            await docRef.set({
+                naturaUrl: catalogoNaturaUrl,
+                avonUrl: catalogoAvonUrl,
+                actualizado: new Date().toISOString()
+            });
+            console.log("Documento de links creado en Firestore");
+        }
+        actualizarLinksCatalogo();
+    } catch (error) {
+        console.error("Error cargando links:", error);
+    }
+}
+
+async function guardarLinksFirestore() {
+    let n = document.getElementById("linkNaturaInput").value.trim();
+    let a = document.getElementById("linkAvonInput").value.trim();
+    if (n) catalogoNaturaUrl = n;
+    if (a) catalogoAvonUrl = a;
+    
+    try {
+        const docRef = db.collection("configuracion").doc("links");
+        await docRef.set({
+            naturaUrl: catalogoNaturaUrl,
+            avonUrl: catalogoAvonUrl,
+            actualizado: new Date().toISOString()
+        });
+        actualizarLinksCatalogo();
+        alert("✅ Links guardados en la nube! Todos los dispositivos verán los mismos links.");
+        console.log("Links guardados en Firestore:", catalogoNaturaUrl, catalogoAvonUrl);
+    } catch (error) {
+        console.error("Error guardando links:", error);
+        alert("Error al guardar: " + error.message);
+    }
+}
 
 // ========== UI FUNCIONES ==========
 function openImageModal(url) { document.getElementById("modalImage").src = url; document.getElementById("imageModal").classList.add("show"); }
@@ -632,7 +677,7 @@ function limpiarFormProducto() {
 
 async function agregarVideo() { let t = document.getElementById("videoTitulo").value.trim(); let u = document.getElementById("videoUrl").value.trim(); if (!t || !u) { alert("Completá título y URL"); return; } await db.collection("videos").add({ titulo: t, url: u }); await cargarVideos(); document.getElementById("videoTitulo").value = ""; document.getElementById("videoUrl").value = ""; alert("Video agregado"); }
 async function agregarCupon() { let c = document.getElementById("cuponCodigo").value.trim().toUpperCase(); let t = document.getElementById("cuponTipo").value; let v = parseInt(document.getElementById("cuponValor").value); let u = document.getElementById("cuponUnico").value; if (!c || !v) { alert("Completá código y valor"); return; } await db.collection("cupones").add({ codigo: c, tipo: t, valor: v, unico: u }); await cargarCupones(); document.getElementById("cuponCodigo").value = ""; document.getElementById("cuponValor").value = ""; alert("Cupón agregado"); }
-function guardarLinks() { let n = document.getElementById("linkNaturaInput").value.trim(); let a = document.getElementById("linkAvonInput").value.trim(); if (n) { catalogoNaturaUrl = n; localStorage.setItem("lilia_catalogo_natura", n); } if (a) { catalogoAvonUrl = a; localStorage.setItem("lilia_catalogo_avon", a); } actualizarLinksCatalogo(); alert("Links guardados"); }
+function guardarLinks() { guardarLinksFirestore(); }
 
 // ========== LOGIN GOOGLE ==========
 async function loginGoogle() {
@@ -652,7 +697,7 @@ async function logout() { await auth.signOut(); localStorage.removeItem("admin_l
 // ========== INICIALIZACIÓN ==========
 document.addEventListener("DOMContentLoaded", async () => {
     initDarkMode();
-    actualizarLinksCatalogo();
+    await cargarLinksFirestore(); // Cargar links desde Firestore
     await cargarProductos();
     await cargarVideos();
     await cargarCupones();
@@ -702,6 +747,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btnGoogleLogin").onclick = loginGoogle;
     document.getElementById("btnLogout").onclick = logout;
     
+    // Cargar los links actuales en los inputs del admin cuando se loguea
     auth.onAuthStateChanged((user) => {
         let adminPanel = document.getElementById("adminPanel");
         let btnLogin = document.getElementById("btnGoogleLogin");
